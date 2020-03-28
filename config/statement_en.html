@@ -30,7 +30,9 @@
     <div class="blk">
       <div class="title">Input for one game turn</div>
       <div class="text">
-      	<span class="statement-lineno">Line 1:</span> 2 integers <var>left_encoder</var> and <var>right_encoder</var> for the current values of the robot encoders.
+      	<span class="statement-lineno">Line 1:</span> 2 integers <var>left_encoder1</var> and <var>right_encoder1</var> for the current values of the robot 1 encoders.
+      	<br>
+      	<span class="statement-lineno">Line 2:</span> 2 integers <var>left_encoder2</var> and <var>right_encoder2</var> for the current values of the robot 2 encoders.
       	<br>
       </div>
     </div>
@@ -39,9 +41,11 @@
     <div class="blk">
       <div class="title">Output for one game turn</div>
       <div class="text">
-      	<span class="statement-lineno">Line 1:</span> 2 integers <var>left_motor</var> and <var>right_motor</var>: motor outputs from -100 to 100 (percentage of maximum torque).
+      	<span class="statement-lineno">Line 1:</span> 2 integers <var>left_motor1</var> and <var>right_motor2</var>: motor outputs from -100 to 100 for robot 1 (percentage of maximum torque).
       	<br>
-      	<span class="statement-lineno">Line 2:</span> 1 integer <var>estimated_points</var>: estimated points of the current match (for bonus computation)
+      	<span class="statement-lineno">Line 2:</span> 2 integers <var>left_motor2</var> and <var>right_motor2</var>: motor outputs from -100 to 100 for robot 2 (percentage of maximum torque).
+      	<br>
+      	<span class="statement-lineno">Line 3:</span> 1 integer <var>estimated_points</var>: estimated points of the current match (for bonus computation)
       	<br>
       </div>
     </div>

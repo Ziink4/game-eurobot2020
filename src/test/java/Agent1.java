@@ -11,18 +11,21 @@ public class Agent1 {
 		int i = 0;
 		// game loop
 		while (true) {
-			int leftencoder = in.nextInt();
-			int rightencoder = in.nextInt();
+			in.nextInt();
+			in.nextInt();
+			in.nextInt();
+			in.nextInt();
 
 			// Write an action using System.out.println()
 			// To debug: System.err.println("Debug messages...");
-			System.err.println(leftencoder + " " + rightencoder);
 			
 			if ((i % 45) < 30) {
 				// Left and right motor setpoint in percentage (intergers)
 				System.out.println("20 20");
+				System.out.println("10 30");
 			} else {
 				System.out.println("-10 -15");
+				System.out.println("-15 15");
 			}
 			System.out.println("3");
 			i += 1;

@@ -10,6 +10,8 @@ public class Agent2 {
         while (true) {
             int leftencoder = in.nextInt();
             int rightencoder = in.nextInt();
+            in.nextInt();
+            in.nextInt();
 
             // Write an action using System.out.println()
             // To debug: System.err.println("Debug messages...");
@@ -21,6 +23,7 @@ public class Agent2 {
             }
             
             // Left and right motor setpoint in percentage (intergers)
+            System.out.println(left + " " + right);
             System.out.println(left + " " + right);
             System.out.println("3");
             i += 1;
