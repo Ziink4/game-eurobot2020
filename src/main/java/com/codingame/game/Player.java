@@ -1,7 +1,12 @@
 package com.codingame.game;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
+import org.dyn4j.dynamics.DetectResult;
+import org.dyn4j.geometry.AABB;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Rectangle;
 import org.dyn4j.geometry.Vector2;
@@ -22,7 +27,8 @@ public class Player extends AbstractMultiplayerPlayer {
 	private Vector2 _last_right_encoder_position = null;
 	private int _total_left_value = 0;
 	private int _total_right_value = 0;
-	private Text _score;
+	private Text _scoreArea;
+	private boolean _isOutOfStartingArea = false; 
 
 	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		String[] line1 = this.getOutputs().get(0).split(" ");
@@ -88,7 +94,7 @@ public class Player extends AbstractMultiplayerPlayer {
 
 		int offset_w = 1610;
 		// Créations des textes
-		_score = graphicEntityModule.createText("000").setFillColor(color).setStrokeColor(0xFFFFFF).setFontSize(128)
+		_scoreArea = graphicEntityModule.createText("000").setFillColor(color).setStrokeColor(0xFFFFFF).setFontSize(128)
 				.setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * offset_w ).setY(25);
 
 	}
@@ -99,6 +105,22 @@ public class Player extends AbstractMultiplayerPlayer {
 	}
 
 	public void render(Referee referee) {
+		
+		if(!_isOutOfStartingArea)
+		{
+			//Detection si le robot est sorti !
+			AABB startarea = new AABB(0 + getIndex() * (3 - 0.4), 0.930, 0.4  + getIndex() * (3 - 0.4), 1.5);
+			
+			if(!referee.getWorld().detect(startarea, _body, false, new LinkedList<DetectResult>()))
+			{
+				_isOutOfStartingArea = true;
+			}
+		}
+		
+		//Calcul du score
+		computeScore(referee);
+		_scoreArea.setText(String.format("%03d", getScore()));
+			
 		// Récupération de la position en mètres et la rotation en radians
 		Vector2 position = _body.getInitialTransform().getTranslation();
 		double rotation = _body.getInitialTransform().getRotationAngle();
@@ -110,6 +132,16 @@ public class Player extends AbstractMultiplayerPlayer {
 		// Modification de la rotation car le repère de l'écran est indirect
 		rotation = 0 - rotation;
 		referee.displayShape(_shape, position, rotation, 1);
+	}
+
+	private void computeScore(Referee referee) {
+		int score = 0;
+		
+		if(_isOutOfStartingArea) {
+			score = 5;
+		}
+		
+		setScore(score);
 	}
 
 	public void sendPlayerInputs() {

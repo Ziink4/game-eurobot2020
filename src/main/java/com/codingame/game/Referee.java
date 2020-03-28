@@ -192,6 +192,10 @@ public class Referee extends AbstractReferee {
 		shape.setY((int) ((2022 - position.y) * scale) + offset_y, Curve.LINEAR);		
 		shape.setRotation(rotation, Curve.LINEAR);
 	}
+
+	public World getWorld() {
+		return _world;
+	}
 	
 	/*
     private static int WIDTH = 1920;
