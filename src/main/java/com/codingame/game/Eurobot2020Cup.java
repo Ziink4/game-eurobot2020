@@ -24,7 +24,7 @@ public class Eurobot2020Cup {
 	
 		org.dyn4j.geometry.Circle shape = new org.dyn4j.geometry.Circle(0.072/2);
 		BodyFixture fixtureBody = new BodyFixture(shape);
-		fixtureBody.setDensity(1);
+		fixtureBody.setDensity(2);
 		fixtureBody.setRestitution(0.1);
 		fixtureBody.setFriction(0.8);
 		_body.addFixture(fixtureBody);
@@ -33,6 +33,7 @@ public class Eurobot2020Cup {
 		_body.setAutoSleepingEnabled(false);
 		_body.translate(x, y);
 		_body.setUserData(this);
+		_body.setLinearDamping(500);
 		referee.getWorld().addBody(_body);
 		
 		// Dessin sur l'interface

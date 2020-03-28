@@ -3,7 +3,7 @@ read leftencoder:int rightencoder:int
 
 
 write 10 5
-write 0
+0
 
 OUTPUT
 Left and right motor setpoint in percentage (intergers)
