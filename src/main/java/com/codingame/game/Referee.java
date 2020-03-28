@@ -64,7 +64,15 @@ public class Referee extends AbstractReferee {
         //Création des robots
 		for (Player p : gameManager.getActivePlayers()) {
 			p.createBody(graphicEntityModule);
-			p.setPosition(0.50 + 1.1 * p.getIndex(), 1.000);
+			if(p.getIndex() == 0)
+			{
+				p.setPosition(0.200, 1.200, -Math.PI/2);
+			}
+			else
+			{
+				p.setPosition(3.0 - 0.2, 1.200, Math.PI/2);	
+			}
+			
 			_world.addBody(p.getBody());
 	      }
 		

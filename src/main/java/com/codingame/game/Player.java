@@ -81,7 +81,8 @@ public class Player extends AbstractMultiplayerPlayer {
 		_shape.add(rectangle);
 	}
 
-	public void setPosition(double x, double y) {
+	public void setPosition(double x, double y, double rotation) {
+		_body.rotate(rotation);
 		_body.translate(x, y);
 	}
 

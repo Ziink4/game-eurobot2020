@@ -17,11 +17,11 @@ public class Agent1 {
 			// Write an action using System.out.println()
 			// To debug: System.err.println("Debug messages...");
 
-			if (i < 30) {
+			if ((i % 45) < 30) {
 				// Left and right motor setpoint in percentage (intergers)
-				System.out.println("50 -50");
+				System.out.println("100 100");
 			} else {
-				System.out.println("0 0");
+				System.out.println("-70 -80");
 
 			}
 			i += 1;
