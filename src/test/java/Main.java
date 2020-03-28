@@ -10,7 +10,7 @@ public class Main {
         gameRunner.setGameParameters(properties);
         
         gameRunner.addAgent(Agent1.class);
-        gameRunner.addAgent(Agent1.class);
+        gameRunner.addAgent(BossHomologationP1.class);
         
         gameRunner.start();
     }
