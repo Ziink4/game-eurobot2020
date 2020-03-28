@@ -23,8 +23,8 @@ public class Agent1 {
 				System.out.println("20 20");
 			} else {
 				System.out.println("-10 -15");
-
 			}
+			System.out.println("3");
 			i += 1;
 		}
 	}

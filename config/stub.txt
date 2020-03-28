@@ -2,7 +2,9 @@ gameloop
 read leftencoder:int rightencoder:int
 
 
-write 50 -50
+write 10 5
+write 0
 
 OUTPUT
 Left and right motor setpoint in percentage (intergers)
+Estimated regular points

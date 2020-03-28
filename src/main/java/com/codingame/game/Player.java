@@ -29,8 +29,12 @@ public class Player extends AbstractMultiplayerPlayer {
 	private int _total_right_value = 0;
 	private Text _scoreArea;
 	private boolean _isOutOfStartingArea = false;
+	private Text _regularScoreArea;
+	private Text _estimatedScoreArea;
+	private int _estimatedScore;
 
 	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
+		//Extract robot 1 set point
 		String[] line1 = this.getOutputs().get(0).split(" ");
 		double left_motor = Integer.parseInt(line1[0]);
 		double right_motor = Integer.parseInt(line1[1]);
@@ -42,12 +46,15 @@ public class Player extends AbstractMultiplayerPlayer {
 		Vector2 velocity2D = _body.getTransform().getRotation().rotate90().toVector(velocity);
 		_body.setLinearVelocity(velocity2D);
 
+		//Extract score data
+		_estimatedScore = Integer.parseInt(this.getOutputs().get(1));
+		
 		return 0;
 	}
 
 	@Override
 	public int getExpectedOutputLines() {
-		return 1;
+		return 2;
 	}
 
 	public Body getBody() {
@@ -96,7 +103,11 @@ public class Player extends AbstractMultiplayerPlayer {
 		// Créations des textes
 		_scoreArea = graphicEntityModule.createText("000").setFillColor(color).setStrokeColor(0xFFFFFF).setFontSize(128)
 				.setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * offset_w).setY(25);
-
+		
+		_regularScoreArea = graphicEntityModule.createText("").setFillColor(0xFFFFFF).setStrokeColor(0xFFFFFF).setFontSize(32)
+				.setX(10 + getIndex() * offset_w).setY(300);
+		_estimatedScoreArea = graphicEntityModule.createText("").setFillColor(0xFFFFFF).setStrokeColor(0xFFFFFF).setFontSize(32)
+				.setX(10 + getIndex() * offset_w).setY(350);
 	}
 
 	public void setPosition(double x, double y, double rotation) {
@@ -118,7 +129,6 @@ public class Player extends AbstractMultiplayerPlayer {
 
 		// Calcul du score
 		computeScore(referee);
-		_scoreArea.setText(String.format("%03d", getScore()));
 
 		// Récupération de la position en mètres et la rotation en radians
 		Vector2 position = _body.getInitialTransform().getTranslation();
@@ -135,14 +145,11 @@ public class Player extends AbstractMultiplayerPlayer {
 
 	private void computeScore(Referee referee) {
 		int score = 0;
-
+		int classical_score = 0;
+			
 		if (_isOutOfStartingArea) {
 			score = 5;
-
-			int classical_score = 0;
-
-			// Détection dans le port 1
-		
+			
 			AABB p1;
 			AABB p2;
 			AABB p1g;
@@ -150,6 +157,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			AABB p2g;
 			AABB p2r;
 			
+			//Génération des zones de marquage de points
 			if(getIndex() == 0)
 			{
 				p1 = new AABB(0.0, 2.0 - 1.1, 0.4, 2.0 - 0.5);
@@ -240,9 +248,19 @@ public class Player extends AbstractMultiplayerPlayer {
 			
 			classical_score += red + green + 2 * Integer.min(red, green);
 			
+			int bonus = (int) (Math.ceil(0.3 * classical_score) - Math.abs(_estimatedScore - classical_score));
+			if(bonus < 0)
+			{
+				bonus = 0;
+			}
+			score += bonus;
+			
 			score += classical_score;
 		}
 
+		_regularScoreArea.setText(String.format("Regular points: %d", classical_score));
+		_estimatedScoreArea.setText(String.format("Est. points: %d", _estimatedScore));
+		_scoreArea.setText(String.format("%03d", getScore()));
 		setScore(score);
 	}
 
