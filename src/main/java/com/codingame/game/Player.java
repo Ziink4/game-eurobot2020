@@ -2,13 +2,11 @@ package com.codingame.game;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
-import org.dyn4j.geometry.Mass;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Rectangle;
 import org.dyn4j.geometry.Vector2;
 
 import com.codingame.gameengine.core.AbstractMultiplayerPlayer;
-import com.codingame.gameengine.module.entities.BufferedGroup;
 import com.codingame.gameengine.module.entities.GraphicEntityModule;
 import com.codingame.gameengine.module.entities.Group;
 
@@ -18,6 +16,10 @@ public class Player extends AbstractMultiplayerPlayer {
 	
 	private double _width_mm;
 	private double _height_mm;
+	private Vector2 _last_left_encoder_position = null;
+	private Vector2 _last_right_encoder_position = null;
+	private int _total_left_value = 0;
+	private int _total_right_value = 0;
 
 	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		String[] line1 = this.getOutputs().get(0).split(" ");
@@ -90,19 +92,57 @@ public class Player extends AbstractMultiplayerPlayer {
 		//Récupération de la position en mètres et la rotation en radians
 		Vector2 position = _body.getInitialTransform().getTranslation();
 		double rotation = _body.getInitialTransform().getRotationAngle();
-		/**
-		 * @todo transformation coordonnées du centre vers coord du point
-		 *  	 haut gauche en prenant en compte la rotation
-		 **/
-		//fonctionne uniquement avec rotation nulle
-		//position.x -= _width_mm / 2000.0;
-		//position.y += _height_mm / 2000.0;
 		
 		//Converion en mm
 		position.x *= 1000;
 		position.y *= 1000;
+		
 		//Modification de la rotation car le repère de l'écran est indirect
 		rotation = 0 - rotation;
 		referee.displayShape(_shape, position, rotation, 1);
+	}
+
+	public void sendPlayerInputs() {
+		Vector2 left_encoder_position = _body.getTransform().getTransformed(new Vector2(-_width_mm / 2000.0, 0));
+		Vector2 right_encoder_position = _body.getTransform().getTransformed(new Vector2(_width_mm / 2000.0, 0));
+		
+
+		
+		//calcul de l'encodeur gauche
+		int left_value;
+		if(_last_left_encoder_position  == null) {
+			left_value = 0;
+		}
+		else {
+			left_value = (int) (left_encoder_position.distance(_last_left_encoder_position) * 10000);
+			if(_body.getTransform().getInverseTransformed(_last_left_encoder_position).y >= 0)
+			{
+				left_value = -left_value;
+			}
+		}
+		System.out.println(left_encoder_position + " - " + _last_left_encoder_position + " = " + left_value);
+
+		_last_left_encoder_position = left_encoder_position;
+		
+		//calcul de l'encodeur droit
+		int right_value;
+		if(_last_right_encoder_position  == null) {
+			right_value = 0;
+		}
+		else {
+			right_value = (int) (right_encoder_position.distance(_last_right_encoder_position) * 10000);
+			if(_body.getTransform().getInverseTransformed(_last_right_encoder_position).y >= 0)
+			{
+				right_value = -right_value;
+			}
+		}
+		_last_right_encoder_position = right_encoder_position;
+		
+		//Ajout a l'intégrateur
+		_total_left_value += left_value;
+		_total_right_value += right_value;
+		
+		sendInputLine(_total_left_value + " " + _total_right_value);
+        execute();
 	}
 }

@@ -126,8 +126,7 @@ public class Referee extends AbstractReferee {
 	  private void sendPlayerInputs() {
 	        List<Player> allPlayers = gameManager.getPlayers();
 	        for (Player p : allPlayers) {
-	            p.sendInputLine(String.valueOf(0) + " " + String.valueOf(0));
-	            p.execute();
+	        	p.sendPlayerInputs();
 	        }
 	    }
 	  
