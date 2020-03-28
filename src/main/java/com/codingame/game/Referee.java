@@ -17,6 +17,8 @@ import com.codingame.gameengine.module.entities.Curve;
 import com.codingame.gameengine.module.entities.Entity;
 import com.codingame.gameengine.module.entities.GraphicEntityModule;
 import com.codingame.gameengine.module.entities.Rectangle;
+import com.codingame.gameengine.module.entities.Text;
+import com.codingame.gameengine.module.entities.Text.FontWeight;
 import com.codingame.view.AnimatedEventModule;
 import com.codingame.view.ViewerEvent;
 import com.google.inject.Inject;
@@ -31,6 +33,7 @@ public class Referee extends AbstractReferee {
 	@Inject private AnimatedEventModule animatedEventModule;
 	
 	private World _world;
+	private Text _time;
 	
 	@Override
 	public void init() {		
@@ -83,6 +86,10 @@ public class Referee extends AbstractReferee {
 	    for (Player p : gameManager.getActivePlayers()) {
 	    	p.render(this);
 	    }
+	    
+	   //Affichage du temps
+	    _time = graphicEntityModule.createText("000 s").setFillColor(0xb5b0a1).setStrokeColor(0xFFFFFF).setFontSize(64)
+				.setX(graphicEntityModule.getWorld().getWidth() / 2 - 60).setY(10);
 	}
 
 	private void createWall(int x0, int y0, int w, int h) {
@@ -116,6 +123,9 @@ public class Referee extends AbstractReferee {
         for (Player p : gameManager.getActivePlayers()) {
         	p.render(this);
         }
+        
+        //Mise a jour du texte
+        _time.setText(String.format("%03d s", (int)(turn * FRAME_DURATION_ms / 1000)));
        
         //Détection de la fin du match
         if (turn > DUREE_MATCH_s * 1000 / FRAME_DURATION_ms) {
