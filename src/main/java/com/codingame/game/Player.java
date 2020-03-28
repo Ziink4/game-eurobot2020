@@ -28,7 +28,7 @@ public class Player extends AbstractMultiplayerPlayer {
 	private int _total_left_value = 0;
 	private int _total_right_value = 0;
 	private Text _scoreArea;
-	private boolean _isOutOfStartingArea = false; 
+	private boolean _isOutOfStartingArea = false;
 
 	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		String[] line1 = this.getOutputs().get(0).split(" ");
@@ -95,7 +95,7 @@ public class Player extends AbstractMultiplayerPlayer {
 		int offset_w = 1610;
 		// Créations des textes
 		_scoreArea = graphicEntityModule.createText("000").setFillColor(color).setStrokeColor(0xFFFFFF).setFontSize(128)
-				.setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * offset_w ).setY(25);
+				.setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * offset_w).setY(25);
 
 	}
 
@@ -105,22 +105,21 @@ public class Player extends AbstractMultiplayerPlayer {
 	}
 
 	public void render(Referee referee) {
-		
-		if(!_isOutOfStartingArea)
-		{
-			//Detection si le robot est sorti !
-			AABB startarea = new AABB(0 + getIndex() * (3 - 0.4), 0.930, 0.4  + getIndex() * (3 - 0.4), 1.5);
-			
-			if(!referee.getWorld().detect(startarea, _body, false, new LinkedList<DetectResult>()))
-			{
+
+		if (!_isOutOfStartingArea) {
+			// Detection si le robot est sorti !
+			AABB startarea = new AABB(0 + getIndex() * (3 - 0.4), 2.0 - 1.07, 0.4 + getIndex() * (3 - 0.4),
+					2.0 - 0.530);
+
+			if (!referee.getWorld().detect(startarea, _body, false, new LinkedList<DetectResult>())) {
 				_isOutOfStartingArea = true;
 			}
 		}
-		
-		//Calcul du score
+
+		// Calcul du score
 		computeScore(referee);
 		_scoreArea.setText(String.format("%03d", getScore()));
-			
+
 		// Récupération de la position en mètres et la rotation en radians
 		Vector2 position = _body.getInitialTransform().getTranslation();
 		double rotation = _body.getInitialTransform().getRotationAngle();
@@ -136,11 +135,114 @@ public class Player extends AbstractMultiplayerPlayer {
 
 	private void computeScore(Referee referee) {
 		int score = 0;
-		
-		if(_isOutOfStartingArea) {
+
+		if (_isOutOfStartingArea) {
 			score = 5;
-		}
+
+			int classical_score = 0;
+
+			// Détection dans le port 1
 		
+			AABB p1;
+			AABB p2;
+			AABB p1g;
+			AABB p1r;
+			AABB p2g;
+			AABB p2r;
+			
+			if(getIndex() == 0)
+			{
+				p1 = new AABB(0.0, 2.0 - 1.1, 0.4, 2.0 - 0.5);
+				p2 = new AABB(1.65, 0, 1.95, 2.0 - 1.7);
+				
+				p1g = new AABB(0.0, 2.0 - 0.53, 0.4, 2 - 0.50);
+				p1r = new AABB(0.0, 2.0 - 0.53, 0.4, 2 - 0.50);
+				
+				p2g = new AABB(1.65, 0, 1.75, 2 - 1.7);
+				p2r = new AABB(1.85, 0, 1.95, 2 - 1.7);
+			}
+			else
+			{
+				p1 = new AABB(3.0 - 0.4, 2.0 - 1.1, 3.0, 2.0 - 0.5);	
+				p2 = new AABB(1.05, 0, 1.35, 2.0 - 1.7);
+				
+				p1r = new AABB(3 - 0.4, 2.0 - 0.53, 3.0, 2 - 0.50);
+				p1g = new AABB(3 - 0.4, 2.0 - 0.53, 3.0, 2 - 0.50);
+				
+				p2g = new AABB(1.05, 0, 1.15, 2 - 1.7);
+				p2r = new AABB(1.25, 0, 1.35, 2 - 1.7);
+			}
+			
+			LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+			referee.getWorld().detect(p1, results);
+			referee.getWorld().detect(p2, results);
+			for (DetectResult r : results) {
+				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+					classical_score += 1;
+				}
+			}
+			
+			//Vérification cannaux port 1
+			results.clear();
+			int green = 0;
+			referee.getWorld().detect(p1g, results);
+			for (DetectResult r : results) {
+				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
+					if(c.getType() == Eurobot2020CupType.GREEN)
+					{
+						green += 1;
+					}
+				}
+			}
+			
+			results.clear();
+			int red = 0;
+			referee.getWorld().detect(p1r, results);
+			for (DetectResult r : results) {
+				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
+					if(c.getType() == Eurobot2020CupType.RED)
+					{
+						red += 1;
+					}
+				}
+			}
+			
+			classical_score += red + green + 2 * Integer.min(red, green);
+			
+			//Vérification cannaux port 2
+			results.clear();
+			green = 0;
+			referee.getWorld().detect(p2g, results);
+			for (DetectResult r : results) {
+				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
+					if(c.getType() == Eurobot2020CupType.GREEN)
+					{
+						green += 1;
+					}
+				}
+			}
+			
+			results.clear();
+			red = 0;
+			referee.getWorld().detect(p2r, results);
+			for (DetectResult r : results) {
+				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
+					if(c.getType() == Eurobot2020CupType.RED)
+					{
+						red += 1;
+					}
+				}
+			}
+			
+			classical_score += red + green + 2 * Integer.min(red, green);
+			
+			score += classical_score;
+		}
+
 		setScore(score);
 	}
 
