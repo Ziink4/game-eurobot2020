@@ -4,7 +4,7 @@ read leftencoder2:int rightencoder2:int
 
 
 write 10 5
-write 0 0
+0 0
 0
 
 OUTPUT

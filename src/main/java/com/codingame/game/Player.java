@@ -40,6 +40,23 @@ public class Player extends AbstractMultiplayerPlayer {
 			String[] line1 = this.getOutputs().get(i).split(" ");
 			double left_motor = Integer.parseInt(line1[0]);
 			double right_motor = Integer.parseInt(line1[1]);
+			
+			if(left_motor > 100)
+			{
+				left_motor = 100;
+			}
+			if(left_motor < -100)
+			{
+				left_motor = -100;
+			}
+			if(right_motor > 100)
+			{
+				right_motor = 100;
+			}
+			if(right_motor < -100)
+			{
+				right_motor = -100;
+			}
 
 			double angularVelocity = (right_motor - left_motor) / 100.0 * 1;
 			double velocity = (right_motor + left_motor) / 100.0 * 1;
@@ -80,7 +97,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			Rectangle shape = new Rectangle(_width_mm[i] / 1000.0, _height_mm[i] / 1000.0);
 
 			BodyFixture fixtureBody = new BodyFixture(shape);
-			fixtureBody.setDensity(20);
+			fixtureBody.setDensity(200);
 			fixtureBody.setRestitution(0);
 			fixtureBody.setFriction(1);
 			_body[i].addFixture(fixtureBody);
