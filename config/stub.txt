@@ -1,10 +1,8 @@
 gameloop
-read y:int
-read oppY:int
-read ballX:int ballY:int
-read speedX:int speedY:int
+read leftencoder:int rightencoder:int
 
-write 0
+
+write 50 -50
 
 OUTPUT
-The destination y coordinate of your paddle
+Left and right motor setpoint in percentage (intergers)

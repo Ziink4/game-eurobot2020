@@ -2,18 +2,19 @@ import java.util.Scanner;
 
 public class Agent2 {
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            int y = scanner.nextInt();
-            int oppY = scanner.nextInt();
-            int ballX = scanner.nextInt();
-            int ballY = scanner.nextInt();
-            int speedX = scanner.nextInt();
-            int speedY = scanner.nextInt();
+    	 Scanner in = new Scanner(System.in);
 
-            int targetY = (int) Math.round(ballY + speedY * 1);
+         // game loop
+         while (true) {
+             int leftencoder = in.nextInt();
+             int rightencoder = in.nextInt();
 
-            System.out.println(targetY);
-        }
+             // Write an action using System.out.println()
+             // To debug: System.err.println("Debug messages...");
+
+
+             // Left and right motor setpoint in percentage (intergers)
+             System.out.println("50 -100");
+         }
     }
 }
