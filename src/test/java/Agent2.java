@@ -23,8 +23,8 @@ public class Agent2 {
             }
             
             // Left and right motor setpoint in percentage (intergers)
-            System.out.println(left + " " + right);
-            System.out.println(left + " " + right);
+            System.out.println(left + " " + right + " IDLE");
+            System.out.println(left + " " + right + " IDLE");
             System.out.println("3");
             i += 1;
         }

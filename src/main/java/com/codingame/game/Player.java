@@ -12,12 +12,18 @@ import org.dyn4j.geometry.Rectangle;
 import org.dyn4j.geometry.Vector2;
 
 import com.codingame.gameengine.core.AbstractMultiplayerPlayer;
+import com.codingame.gameengine.module.entities.Circle;
 import com.codingame.gameengine.module.entities.GraphicEntityModule;
 import com.codingame.gameengine.module.entities.Group;
 import com.codingame.gameengine.module.entities.Text;
+import com.codingame.gameengine.module.entities.BlendableEntity.BlendMode;
 import com.codingame.gameengine.module.entities.Text.FontWeight;
 
 public class Player extends AbstractMultiplayerPlayer {
+	private enum MechanicalState {
+		IDLE, PRE_TAKE_FLOOR,
+	};
+	
 	private Body[] _body = { null, null };
 	private Group[] _shape = { null, null };
 
@@ -32,6 +38,8 @@ public class Player extends AbstractMultiplayerPlayer {
 	private Text _regularScoreArea;
 	private Text _estimatedScoreArea;
 	private int _estimatedScore;
+	private MechanicalState[] _mechanical_state = {MechanicalState.IDLE, MechanicalState.IDLE};
+	private Circle[] _graber = {null, null};
 
 	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
@@ -40,6 +48,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			String[] line1 = this.getOutputs().get(i).split(" ");
 			double left_motor = Integer.parseInt(line1[0]);
 			double right_motor = Integer.parseInt(line1[1]);
+			String order = line1[2];
 			
 			if(left_motor > 100)
 			{
@@ -64,6 +73,18 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].setAngularVelocity(angularVelocity);
 			Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(velocity);
 			_body[i].setLinearVelocity(velocity2D);
+			
+			switch(order)
+			{
+			case "IDLE":
+				break;
+			case "PRE_TAKE_FLOOR":
+				_mechanical_state[i] = MechanicalState.PRE_TAKE_FLOOR;
+				break;
+			default:
+				this.deactivate("Invalid order '"+order+"'");
+				break;
+			}
 		}
 
 		// Extract score data
@@ -146,7 +167,16 @@ public class Player extends AbstractMultiplayerPlayer {
 			Text text = referee.getGraphicEntityModule().createText(String.format("%d", i + 1));
 			text.setFontSize(64).setFontWeight(FontWeight.BOLD).setStrokeColor(0xFFFFFF).setFillColor(0xFFFFFF).setX(-16).setY(-32);
 			
+			_graber[i] = referee.getGraphicEntityModule().createCircle();
+			_graber[i].setFillColor(0xFFFFFF);
+			_graber[i].setRadius(40);
+			_graber[i].setY((int) (-_height_mm[i] / 2));
+			_graber[i].setFillAlpha(0.5);
+			_graber[i].setLineAlpha(0);
+			_graber[i].setVisible(false);
+			
 			_shape[i] = referee.getGraphicEntityModule().createGroup();
+			_shape[i].add(_graber[i]);
 			_shape[i].add(rectangle);
 			_shape[i].add(text);
 		}
@@ -191,6 +221,34 @@ public class Player extends AbstractMultiplayerPlayer {
 			// Modification de la rotation car le repère de l'écran est indirect
 			rotation = 0 - rotation;
 			referee.displayShape(_shape[i], position, rotation, 1);
+		
+		
+			org.dyn4j.geometry.Circle circle;
+			//Affichage de la meca
+			switch(_mechanical_state[i])
+			{
+			case IDLE:
+				_graber[i].setVisible(false);
+				break;
+				
+			case PRE_TAKE_FLOOR:
+				_graber[i].setVisible(true);
+				_graber[i].setLineWidth(0);
+				
+				circle = new org.dyn4j.geometry.Circle(0.04);
+				circle.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
+				//Recherche d'élements prenables
+				LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+				referee.getWorld().detect(circle, results);
+				for (DetectResult r : results) {
+					if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+						_graber[i].setLineColor(0);
+						_graber[i].setLineWidth(16);
+						break;
+					}
+				}
+				break;
+			}
 		}
 	}
 

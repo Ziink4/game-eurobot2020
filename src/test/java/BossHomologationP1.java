@@ -13,12 +13,12 @@ public class BossHomologationP1 {
 
 				//Just robot 1 for few seconds
 				if(i < 5) {
-					System.out.println("10 10");
+					System.out.println("10 10 IDLE");
 				}
 				else {
-					System.out.println("0 0");
+					System.out.println("0 0 IDLE");
 				}
-				System.out.println("0 0");
+				System.out.println("0 0 IDLE");
 				System.out.println("3");
 				i += 1;
 			}

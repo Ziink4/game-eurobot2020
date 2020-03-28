@@ -41,12 +41,20 @@
     <div class="blk">
       <div class="title">Output for one game turn</div>
       <div class="text">
-      	<span class="statement-lineno">Line 1:</span> 2 integers <var>left_motor1</var> and <var>right_motor2</var>: motor outputs from -100 to 100 for robot 1 (percentage of maximum torque).
+      	<span class="statement-lineno">Line 1:</span> 
+      		2 integers <var>left_motor1</var> and <var>right_motor1</var> (motor outputs from -100 to 100 for robot 1 - percentage of maximum torque) and one string <var>meca_order1</var>
       	<br>
-      	<span class="statement-lineno">Line 2:</span> 2 integers <var>left_motor2</var> and <var>right_motor2</var>: motor outputs from -100 to 100 for robot 2 (percentage of maximum torque).
+      	<span class="statement-lineno">Line 2:</span> 
+      		2 integers <var>left_motor2</var> and <var>right_motor2</var> (motor outputs from -100 to 100 for robot 2 - percentage of maximum torque) and one string <var>meca_order2</var>
       	<br>
       	<span class="statement-lineno">Line 3:</span> 1 integer <var>estimated_points</var>: estimated points of the current match (for bonus computation)
       	<br>
+      	Meca order can be :
+      	<ul>
+      	<li>IDLE : no action
+      	<li>PRE_TAKE_FLOOR : prepare robot for taking on the floor
+      	<li>TAKE_FLOOR : take an element on the floor
+      	</ul>
       </div>
     </div>
 
