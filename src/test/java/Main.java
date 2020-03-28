@@ -1,5 +1,4 @@
 import java.util.Properties;
-
 import com.codingame.gameengine.runner.MultiplayerGameRunner;
 
 public class Main {

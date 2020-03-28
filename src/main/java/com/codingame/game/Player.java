@@ -19,7 +19,7 @@ public class Player extends AbstractMultiplayerPlayer {
 	private double _width_mm;
 	private double _height_mm;
 
-	int getAction() throws NumberFormatException, TimeoutException {
+	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		String[] line1 = this.getOutputs().get(0).split(" ");
 		double left_motor = Integer.parseInt(line1[0]);
 		double right_motor = Integer.parseInt(line1[1]);
@@ -65,6 +65,7 @@ public class Player extends AbstractMultiplayerPlayer {
 		com.codingame.gameengine.module.entities.Rectangle rectangle = graphicEntityModule.createRectangle();
 		rectangle.setWidth((int) _width_mm).setHeight((int) _height_mm);
 		rectangle.setLineColor(0x000000);
+		rectangle.setLineWidth(2);
 		if(getIndex() == 0)
 		{
 			rectangle.setFillColor(0x007cb0);

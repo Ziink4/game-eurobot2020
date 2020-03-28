@@ -131,9 +131,16 @@ public class Referee extends AbstractReferee {
 				} catch (NumberFormatException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+					p.deactivate("Bad response (NumberFormatException)");
 				} catch (TimeoutException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+					p.deactivate("Bad response (TimeoutException)");
+				}
+	            catch (ArrayIndexOutOfBoundsException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					p.deactivate("Bad response (ArrayIndexOutOfBoundsException)");
 				}
 	        }
 	    }
