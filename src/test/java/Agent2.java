@@ -30,15 +30,15 @@ public class Agent2 {
 						System.out.println("20 20 " + order);
 					} 
 					else {
-						System.out.println("0 0 " + order);
+						System.out.println("-2 -2 " + order);
 					}
 				}
 				else {
 					if (turn< 5) {
-						System.out.println("60 60 " + order);
+						System.out.println("20 20 " + order);
 					} 
 					else {
-						System.out.println("0 0 " + order);
+						System.out.println("60 60 " + order);
 					}
 				}
 				

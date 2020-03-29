@@ -1,10 +1,14 @@
 package com.codingame.game;
 
+import java.time.Duration;
+import java.util.Date;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.dynamics.DetectResult;
+import org.dyn4j.dynamics.contact.ContactPoint;
 import org.dyn4j.geometry.AABB;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Rectangle;
@@ -40,6 +44,10 @@ public class Player extends AbstractMultiplayerPlayer {
 	private MechanicalState[] _mechanical_state = {MechanicalState.IDLE, MechanicalState.IDLE};
 	private Circle[] _graber = {null, null};
 	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
+	private int[] _lastPenalty = {-50000, -50000};
+	private Text _penaltiesArea;
+
+	private int _penalties;
 	
 	int getAction(Referee referee) throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
@@ -75,6 +83,44 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].setAngularVelocity(angularVelocity);
 			Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(velocity);
 			_body[i].setLinearVelocity(velocity2D);
+			
+			//check collision
+			List<ContactPoint> cts = _body[i].getContacts(false);
+			for(ContactPoint cp : cts) {
+				Body b = cp.getBody1();
+				if(b == _body[i]) {
+					b = cp.getBody2();
+				}
+				if(b.getUserData() instanceof Player) {
+					Player p = (Player) b.getUserData();
+					if(p != this) {
+						//check if we are moving foward
+						Vector2 op_pos = _body[i].getTransform().getInverseTransformed(b.getTransform().getTranslation());
+						if(op_pos.y >= 0)
+						{
+							if(velocity <= 0)
+							{
+								continue;
+							}
+						}
+						else
+						{
+							if(velocity >= 0)
+							{
+								continue;
+							}
+						}
+						
+						//add penalties
+						int now = referee.getElapsedTime();
+						int delta = now - _lastPenalty[i];
+						_lastPenalty[i] = now;
+						if(delta > 2000) {
+							_penalties += 20;
+						}
+					}
+				}
+			}
 			
 			//parse mechanical order
 			switch(order)
@@ -196,6 +242,8 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].translateToOrigin();
 			_body[i].setMass(MassType.NORMAL);
 			_body[i].setAutoSleepingEnabled(false);
+			_body[i].setBullet(true);
+			_body[i].setUserData(this);
 			
 			if(getIndex() == 0)
 			{
@@ -260,6 +308,8 @@ public class Player extends AbstractMultiplayerPlayer {
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(300);
 		_estimatedScoreArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(350);
+		_penaltiesArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
+				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(400);
 	}
 
 	public void render(Referee referee) {
@@ -428,10 +478,16 @@ public class Player extends AbstractMultiplayerPlayer {
 			score += bonus;
 
 			score += classical_score;
+			score -= _penalties;
+			
+			if(score < 0) {
+				score = 0;
+			}
 		}
 
 		_regularScoreArea.setText(String.format("Regular points: %d", classical_score));
 		_estimatedScoreArea.setText(String.format("Est. points: %d", _estimatedScore));
+		_penaltiesArea.setText(String.format("Penalties: %d", -_penalties));
 		_scoreArea.setText(String.format("%03d", getScore()));
 		setScore(score);
 	}

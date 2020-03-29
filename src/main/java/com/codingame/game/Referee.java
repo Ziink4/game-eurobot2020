@@ -35,6 +35,7 @@ public class Referee extends AbstractReferee {
 	private World _world;
 	private Text _time;
 	private LinkedList<Eurobot2020Cup> _cups = new LinkedList<Eurobot2020Cup>();
+	private int _elapsedTime = 0;
 
 	@Override
 	public void init() {
@@ -144,6 +145,7 @@ public class Referee extends AbstractReferee {
 
 		// Simulation du monde
 		_world.update(FRAME_DURATION_ms / 1000.0, -1, 1000);
+		_elapsedTime += FRAME_DURATION_ms;
 
 		// Mise a jour positions joueurs
 		for (Player p : gameManager.getPlayers()) {
@@ -156,10 +158,10 @@ public class Referee extends AbstractReferee {
 		}
 
 		// Mise a jour du texte
-		_time.setText(String.format("%03d s", (int) (turn * FRAME_DURATION_ms / 1000)));
+		_time.setText(String.format("%03d s", (int) (_elapsedTime / 1000)));
 
 		// Détection de la fin du match
-		if (turn > DUREE_MATCH_s * 1000 / FRAME_DURATION_ms) {
+		if (_elapsedTime > DUREE_MATCH_s * 1000) {
 			gameManager.endGame();
 		}
 	}
@@ -226,5 +228,9 @@ public class Referee extends AbstractReferee {
 
 	public GraphicEntityModule getGraphicEntityModule() {
 		return graphicEntityModule;
+	}
+
+	public int getElapsedTime() {
+		return _elapsedTime ;
 	}
 }
