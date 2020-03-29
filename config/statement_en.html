@@ -15,8 +15,16 @@
           <span>Rules</span>
       </h1>
       <div class="statement-rules-content">
-          <p>Read the eurobot 2020 contest rules</p>
-          <p>Encoder values are multiples of 0.1 mm<p>
+          <p>Read the eurobot 2020 <a href="https://www.eurobot.org/images/2020/Eurobot2020_Rules_Cup_OFFICIAL_EN.pdf">contest rules</a></p>
+          <p>Informations :
+	      	<ul>
+		      	<li>The height of the robot is 150 mm</li>
+		      	<li>The width of the robot is 250 mm</li>
+		      	<li>Encoder values are in multiple of 0.1mm</li>
+		      	<li>The distance between the two encoders is 250 mm</li>
+		      	<li>Each robot can only hold up to 5 playing elements</li>
+	      	</ul>
+	      </p>
       </div>
   </div>
 
@@ -28,12 +36,31 @@
     </h2>
     <!-- Protocol block -->
     <div class="blk">
+      <div class="title">Input before the first turn</div>
+      <div class="text">
+		<p>
+		    <span class="statement-lineno">Line 1:</span> <var>player_color</var><br>
+		     <ul>
+		      	<li><var>player_color</var> can be "BLUE" or "YELLOW"</li>
+		  	</ul>
+		</p>
+	  <div>
       <div class="title">Input for one game turn</div>
       <div class="text">
-      	<span class="statement-lineno">Line 1:</span> 2 integers <var>left_encoder1</var> and <var>right_encoder1</var> for the current values of the robot 1 encoders.
-      	<br>
-      	<span class="statement-lineno">Line 2:</span> 2 integers <var>left_encoder2</var> and <var>right_encoder2</var> for the current values of the robot 2 encoders.
-      	<br>
+		<p>
+		    <span class="statement-lineno">Line 1:</span> <var>player_color</var> <var>left_encoder</var> <var>right_encoder</var> <var>last_taken_color</var> for robot 1<br>
+		    <span class="statement-lineno">Line 2:</span> <var>player_color</var> <var>left_encoder</var> <var>right_encoder</var> <var>last_taken_color</var> for robot 2<br>
+		    <ul>
+		      	<li><var>left_encoder</var> and <var>right_encoder</var> are signed integers</li>
+		      	<li><var>last_taken_color</var> can be "?", "GREEN" or "RED"</li>
+		  	</ul>
+		</p>
+	  </div>
+	 <div class="title">Informations</div>
+      <div class="text">
+		<p>
+		  	
+		  </p>
       </div>
     </div>
 
@@ -41,20 +68,23 @@
     <div class="blk">
       <div class="title">Output for one game turn</div>
       <div class="text">
-      	<span class="statement-lineno">Line 1:</span> 
-      		2 integers <var>left_motor1</var> and <var>right_motor1</var> (motor outputs from -100 to 100 for robot 1 - percentage of maximum torque) and one string <var>meca_order1</var>
-      	<br>
-      	<span class="statement-lineno">Line 2:</span> 
-      		2 integers <var>left_motor2</var> and <var>right_motor2</var> (motor outputs from -100 to 100 for robot 2 - percentage of maximum torque) and one string <var>meca_order2</var>
-      	<br>
-      	<span class="statement-lineno">Line 3:</span> 1 integer <var>estimated_points</var>: estimated points of the current match (for bonus computation)
-      	<br>
-      	Meca order can be :
-      	<ul>
-      	<li>IDLE : no action
-      	<li>PRE_TAKE_FLOOR : prepare robot for taking on the floor
-      	<li>TAKE_FLOOR : take an element on the floor
-      	</ul>
+      	<p>
+		    <span class="statement-lineno">Line 1:</span> <var>left_motor</var> <var>right_motor</var> <var>mechanical_order</var> for robot 1<br>
+		    <span class="statement-lineno">Line 2:</span> <var>left_motor</var> <var>right_motor</var> <var>mechanical_order</var> for robot 2<br>
+		    <span class="statement-lineno">Line 3:</span> <var>estimated_points</var><br>
+		    <ul>
+		      	<li><var>left_motor</var> and <var>right_motor</var> must be signed integer from -100 to 100</li>
+		      	<li><var>mechanical_order</var> can be :
+		      		<ul>
+		      		<li>IDLE: do nothing</li>
+		      		<li>ACTIVATE_FRONT: activate the front actuator</li>
+		      		<li>TAKE: take playing element (actuator must be activated before)</li>
+		      		<li>RELEASE: release playing element (actuator must be activated before)</li>
+		      		</ul>
+		      	</li>
+		      	<li><var>estimated_points</var> is an unsigned integer for bonus calculation</li>
+		  	</ul>
+		</p>
       </div>
     </div>
 

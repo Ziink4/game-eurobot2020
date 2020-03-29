@@ -3,13 +3,16 @@ import java.util.Scanner;
 public class BossHomologationP1 {
 	public static void main(String[] args) {
 		try (Scanner in = new Scanner(System.in)) {
+			String playerColor = in.next();
+			
 			int i = 0;
 			// game loop
 			while (true) {
-				in.nextInt();
-				in.nextInt();
-				in.nextInt();
-				in.nextInt();
+				for (int k = 0; k < 2; k++) {
+					int leftEncoder = in.nextInt();
+					int rightEncoder = in.nextInt();
+					String lastTakenColor = in.next();
+				}
 
 				//Just robot 1 for few seconds
 				if(i < 5) {

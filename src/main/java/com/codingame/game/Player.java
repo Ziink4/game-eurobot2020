@@ -1,7 +1,6 @@
 package com.codingame.game;
 
 import java.util.LinkedList;
-import java.util.List;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
@@ -13,16 +12,16 @@ import org.dyn4j.geometry.Vector2;
 
 import com.codingame.gameengine.core.AbstractMultiplayerPlayer;
 import com.codingame.gameengine.module.entities.Circle;
-import com.codingame.gameengine.module.entities.GraphicEntityModule;
 import com.codingame.gameengine.module.entities.Group;
 import com.codingame.gameengine.module.entities.Text;
-import com.codingame.gameengine.module.entities.BlendableEntity.BlendMode;
 import com.codingame.gameengine.module.entities.Text.FontWeight;
 
 public class Player extends AbstractMultiplayerPlayer {
 	private enum MechanicalState {
-		IDLE, PRE_TAKE_FLOOR,
-	};
+		IDLE, ACTIVATE_FRONT, TAKE,
+	}
+
+	private static final int OFFSET_W = 1610;
 	
 	private Body[] _body = { null, null };
 	private Group[] _shape = { null, null };
@@ -40,8 +39,9 @@ public class Player extends AbstractMultiplayerPlayer {
 	private int _estimatedScore;
 	private MechanicalState[] _mechanical_state = {MechanicalState.IDLE, MechanicalState.IDLE};
 	private Circle[] _graber = {null, null};
-
-	int getAction() throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
+	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
+	
+	int getAction(Referee referee) throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
 		int i;
 		for (i = 0; i < 2; i += 1) {
@@ -50,6 +50,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			double right_motor = Integer.parseInt(line1[1]);
 			String order = line1[2];
 			
+			//clamp motors set point
 			if(left_motor > 100)
 			{
 				left_motor = 100;
@@ -67,6 +68,7 @@ public class Player extends AbstractMultiplayerPlayer {
 				right_motor = -100;
 			}
 
+			//assign motor setpoints
 			double angularVelocity = (right_motor - left_motor) / 100.0 * 1;
 			double velocity = (right_motor + left_motor) / 100.0 * 1;
 
@@ -74,13 +76,65 @@ public class Player extends AbstractMultiplayerPlayer {
 			Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(velocity);
 			_body[i].setLinearVelocity(velocity2D);
 			
+			//parse mechanical order
 			switch(order)
 			{
 			case "IDLE":
+				//Do nothing
 				break;
-			case "PRE_TAKE_FLOOR":
-				_mechanical_state[i] = MechanicalState.PRE_TAKE_FLOOR;
+				
+			case "ACTIVATE_FRONT":
+				//prepare taking from front
+				_mechanical_state[i] = MechanicalState.ACTIVATE_FRONT;
 				break;
+				
+			case "TAKE":
+				//take something
+				org.dyn4j.geometry.Circle circle;
+				switch(_mechanical_state[i])
+				{
+				case ACTIVATE_FRONT:
+					circle = new org.dyn4j.geometry.Circle(0.04);
+					circle.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
+					LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+					referee.getWorld().detect(circle, results);
+					for (DetectResult r : results) {
+						if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
+							Eurobot2020Cup cup = (Eurobot2020Cup) r.getBody().getUserData();
+							take(referee, i, cup);
+							break;
+						}
+					}
+					break;
+					
+				default:
+					break;
+				}
+				
+				_mechanical_state[i] = MechanicalState.IDLE;
+				break;
+				
+			case "RELEASE":
+				//take something
+				switch(_mechanical_state[i])
+				{
+				case ACTIVATE_FRONT:
+					if(_cupTaken != null) {
+						if(_cupTaken[i].size() > 0)
+						{
+							Eurobot2020Cup c = _cupTaken[i].pollLast();
+							c.addToTable(referee, _body[i].getTransform().getTransformed(new Vector2(0, 0.08 + _height_mm[i] / 2000.0)));
+						}
+					}
+					break;
+					
+				default:
+					break;
+				}
+				
+				_mechanical_state[i] = MechanicalState.IDLE;
+				break;
+				
 			default:
 				this.deactivate("Invalid order '"+order+"'");
 				break;
@@ -91,6 +145,23 @@ public class Player extends AbstractMultiplayerPlayer {
 		_estimatedScore = Integer.parseInt(this.getOutputs().get(2));
 
 		return 0;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void take(Referee referee, int robot, Eurobot2020Cup cup) {
+		if(_cupTaken == null) {
+			_cupTaken = (LinkedList<Eurobot2020Cup>[]) new LinkedList<?>[2];
+			_cupTaken[0] = new LinkedList<Eurobot2020Cup>();
+			_cupTaken[1] = new LinkedList<Eurobot2020Cup>();
+		}
+		if(_cupTaken[robot].size() < 5) {
+			double x = -0.2 - 0.1 * _cupTaken[robot].size();
+			if(getIndex() != 0) {
+				x = 3.0 - x;
+			}
+			cup.removeFromTable(referee, x, 0.5 - 0.25 * robot);
+			_cupTaken[robot].add(cup);
+		}
 	}
 
 	@Override
@@ -181,15 +252,14 @@ public class Player extends AbstractMultiplayerPlayer {
 			_shape[i].add(text);
 		}
 
-		int offset_w = 1610;
 		// Créations des textes
 		_scoreArea = referee.getGraphicEntityModule().createText("000").setFillColor(color).setStrokeColor(0xFFFFFF)
-				.setFontSize(128).setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * offset_w).setY(25);
+				.setFontSize(128).setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * OFFSET_W).setY(25);
 
 		_regularScoreArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
-				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * offset_w).setY(300);
+				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(300);
 		_estimatedScoreArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
-				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * offset_w).setY(350);
+				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(350);
 	}
 
 	public void render(Referee referee) {
@@ -227,11 +297,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			//Affichage de la meca
 			switch(_mechanical_state[i])
 			{
-			case IDLE:
-				_graber[i].setVisible(false);
-				break;
-				
-			case PRE_TAKE_FLOOR:
+			case ACTIVATE_FRONT:
 				_graber[i].setVisible(true);
 				_graber[i].setLineWidth(0);
 				
@@ -247,6 +313,11 @@ public class Player extends AbstractMultiplayerPlayer {
 						break;
 					}
 				}
+				break;
+				
+			default:
+			case IDLE:
+				_graber[i].setVisible(false);
 				break;
 			}
 		}
@@ -272,7 +343,7 @@ public class Player extends AbstractMultiplayerPlayer {
 				p2 = new AABB(1.65, 0, 1.95, 2.0 - 1.7);
 
 				p1g = new AABB(0.0, 2.0 - 0.53, 0.4, 2 - 0.50);
-				p1r = new AABB(0.0, 2.0 - 0.53, 0.4, 2 - 0.50);
+				p1r = new AABB(0.0, 2.0 - 1.1, 0.4, 2 - 1.07);
 
 				p2g = new AABB(1.65, 0, 1.75, 2 - 1.7);
 				p2r = new AABB(1.85, 0, 1.95, 2 - 1.7);
@@ -281,7 +352,7 @@ public class Player extends AbstractMultiplayerPlayer {
 				p2 = new AABB(1.05, 0, 1.35, 2.0 - 1.7);
 
 				p1r = new AABB(3 - 0.4, 2.0 - 0.53, 3.0, 2 - 0.50);
-				p1g = new AABB(3 - 0.4, 2.0 - 0.53, 3.0, 2 - 0.50);
+				p1g = new AABB(3 - 0.4, 2.0 - 1.1, 3.0, 2 - 1.07);
 
 				p2g = new AABB(1.05, 0, 1.15, 2 - 1.7);
 				p2r = new AABB(1.25, 0, 1.35, 2 - 1.7);
@@ -398,9 +469,33 @@ public class Player extends AbstractMultiplayerPlayer {
 			// Ajout a l'intégrateur
 			_total_left_value[i] += left_value;
 			_total_right_value[i] += right_value;
+			
+			String last_taken = "?";
+			if(_cupTaken != null) {
+				if(_cupTaken[i].size() > 0) {
+					Eurobot2020Cup c = _cupTaken[i].peekLast();
+					if(c.getType() == Eurobot2020CupType.GREEN) {
+						last_taken = "GREEN";
+					}
+					else {
+						last_taken = "RED";
+					}
+				}
+			}
 
-			sendInputLine(_total_left_value[i] + " " + _total_right_value[i]);
+			sendInputLine(_total_left_value[i] + " " + _total_right_value[i] + " " + last_taken);
 		}
 		execute();
+	}
+
+	public void sendGameConfiguration() {
+		//send player color
+		String color = "BLUE";
+		if(getIndex() == 1)
+		{
+			color = "YELLOW";
+		}
+		
+		sendInputLine(color);
 	}
 }

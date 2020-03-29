@@ -2,31 +2,50 @@ import java.util.Scanner;
 
 public class Agent2 {
     public static void main(String[] args) {
-    	Scanner in = new Scanner(System.in);
-        int i = 0;
-        int left = 0, right = 0;
+    	try (Scanner in = new Scanner(System.in)) {
+			String playerColor = in.next();
+			
+			int turn = 0;
+			int score = 0;
+			// game loop
+			while (true) {
+				for (int i = 0; i < 2; i++) {
+					int leftEncoder = in.nextInt();
+					int rightEncoder = in.nextInt();
+					String lastTakenColor = in.next();
+				}
+				// Write an action using System.out.println()
+				// To debug: 
 
-        // game loop
-        while (true) {
-            int leftencoder = in.nextInt();
-            int rightencoder = in.nextInt();
-            in.nextInt();
-            in.nextInt();
-
-            // Write an action using System.out.println()
-            // To debug: System.err.println("Debug messages...");
-
-            if((i % 10) == 0)
-            {
-            	left = (int) (Math.random() * 200 - 100);
-            	right = (int) (Math.random() * 200 - 100);
-            }
-            
-            // Left and right motor setpoint in percentage (intergers)
-            System.out.println(left + " " + right + " IDLE");
-            System.out.println(left + " " + right + " IDLE");
-            System.out.println("3");
-            i += 1;
-        }
+				System.err.println(playerColor);
+				
+				String order = "ACTIVATE_FRONT";
+				if((turn % 2) == 1)
+				{
+					order = "TAKE";
+				}
+				
+				if(playerColor.equals("BLUE")) {
+					if (turn< 5) {
+						System.out.println("20 20 " + order);
+					} 
+					else {
+						System.out.println("0 0 " + order);
+					}
+				}
+				else {
+					if (turn< 5) {
+						System.out.println("60 60 " + order);
+					} 
+					else {
+						System.out.println("0 0 " + order);
+					}
+				}
+				
+				System.out.println("0 0 IDLE");
+				System.out.println(score);
+				turn += 1;
+			}
+    	}
     }
 }

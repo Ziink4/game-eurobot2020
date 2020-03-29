@@ -58,7 +58,7 @@ public class Eurobot2020Cup {
 
 	public void render(Referee referee) {
 		// Récupération de la position en mètres
-		Vector2 position = _body.getInitialTransform().getTranslation();
+		Vector2 position = _body.getTransform().getTranslation();
 
 		// Converion en mm
 		position.x *= 1000;
@@ -69,6 +69,20 @@ public class Eurobot2020Cup {
 
 	public Eurobot2020CupType getType() {
 		return _type;
+	}
+
+	public void removeFromTable(Referee referee, double x, double y) {
+		referee.getWorld().removeBody(_body);
+		_body.translate(_body.getTransform().getTranslation().negate().add(x, y));
+		_body.setAngularVelocity(0);
+		_body.setLinearVelocity(new Vector2(0, 0));
+	}
+
+	public void addToTable(Referee referee, Vector2 position) {
+		_body.translate(_body.getTransform().getTranslation().negate().add(position));
+		_body.setAngularVelocity(0);
+		_body.setLinearVelocity(new Vector2(0, 0));
+		referee.getWorld().addBody(_body);
 	}
 
 }

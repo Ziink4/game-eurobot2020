@@ -1,13 +1,14 @@
+read playerColor:word(6)
+
 gameloop
-read leftencoder1:int rightencoder1:int
-read leftencoder2:int rightencoder2:int
 
-
-write 10 5 IDLE
-0 0 IDLE
-0
+loop 2 read leftEncoder:int rightEncoder:int lastTakenColor:word(5)
+loop 2 write join("0", "0", "IDLE")
 
 OUTPUT
-Left and right motor setpoints in percentage (integers) then meca order for robot 1
-Left and right motor setpoints in percentage (integers) then meca order for robot 2
+left motor order, right motor order, mechanical order
+
+write join("0")
+
+OUTPUT
 Estimated regular points
