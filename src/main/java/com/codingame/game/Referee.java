@@ -167,15 +167,13 @@ public class Referee extends AbstractReferee {
 	}
 
 	private void sendPlayerInputs() {
-		List<Player> allPlayers = gameManager.getPlayers();
-		for (Player p : allPlayers) {
+		for (Player p : gameManager.getActivePlayers()) {
 			p.sendPlayerInputs();
 		}
 	}
 
 	private void readPlayerOutputs() {
-		List<Player> allPlayers = gameManager.getPlayers();
-		for (Player p : allPlayers) {
+		for (Player p : gameManager.getActivePlayers()) {
 			try {
 				p.getAction(this);
 			} catch (NumberFormatException e) {

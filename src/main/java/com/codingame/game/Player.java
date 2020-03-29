@@ -26,7 +26,7 @@ public class Player extends AbstractMultiplayerPlayer {
 	}
 
 	private static final int OFFSET_W = 1610;
-	
+
 	private Body[] _body = { null, null };
 	private Group[] _shape = { null, null };
 
@@ -38,17 +38,18 @@ public class Player extends AbstractMultiplayerPlayer {
 	private int[] _total_right_value = { 0, 0 };
 	private Text _scoreArea;
 	private boolean _isOutOfStartingArea = false;
+	private boolean _fail = false;
 	private Text _regularScoreArea;
 	private Text _estimatedScoreArea;
 	private int _estimatedScore;
-	private MechanicalState[] _mechanical_state = {MechanicalState.IDLE, MechanicalState.IDLE};
-	private Circle[] _graber = {null, null};
+	private MechanicalState[] _mechanical_state = { MechanicalState.IDLE, MechanicalState.IDLE };
+	private Circle[] _graber = { null, null };
 	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
-	private int[] _lastPenalty = {-50000, -50000};
+	private int[] _lastPenalty = { -50000, -50000 };
 	private Text _penaltiesArea;
 
 	private int _penalties;
-	
+
 	int getAction(Referee referee) throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
 		int i;
@@ -57,88 +58,99 @@ public class Player extends AbstractMultiplayerPlayer {
 			double left_motor = Integer.parseInt(line1[0]);
 			double right_motor = Integer.parseInt(line1[1]);
 			String order = line1[2];
-			
-			//clamp motors set point
-			if(left_motor > 100)
-			{
+
+			// clamp motors set point
+			if (left_motor > 100) {
 				left_motor = 100;
 			}
-			if(left_motor < -100)
-			{
+			if (left_motor < -100) {
 				left_motor = -100;
 			}
-			if(right_motor > 100)
-			{
+			if (right_motor > 100) {
 				right_motor = 100;
 			}
-			if(right_motor < -100)
-			{
+			if (right_motor < -100) {
 				right_motor = -100;
 			}
 
-			//assign motor setpoints
+			// assign motor setpoints
 			double angularVelocity = (right_motor - left_motor) / 100.0 * 1;
 			double velocity = (right_motor + left_motor) / 100.0 * 1;
 
 			_body[i].setAngularVelocity(angularVelocity);
 			Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(velocity);
 			_body[i].setLinearVelocity(velocity2D);
-			
-			//check collision
+
+			// check collision
 			List<ContactPoint> cts = _body[i].getContacts(false);
-			for(ContactPoint cp : cts) {
+			for (ContactPoint cp : cts) {
 				Body b = cp.getBody1();
-				if(b == _body[i]) {
+				if (b == _body[i]) {
 					b = cp.getBody2();
 				}
-				if(b.getUserData() instanceof Player) {
+				if (b.getUserData() instanceof Player) {
 					Player p = (Player) b.getUserData();
-					if(p != this) {
-						//check if we are moving foward
-						Vector2 op_pos = _body[i].getTransform().getInverseTransformed(b.getTransform().getTranslation());
-						if(op_pos.y >= 0)
-						{
-							if(velocity <= 0)
-							{
+					if (p != this) {
+						// check if we are moving foward
+						Vector2 op_pos = _body[i].getTransform()
+								.getInverseTransformed(b.getTransform().getTranslation());
+						if (op_pos.y >= 0) {
+							if (velocity <= 0) {
+								continue;
+							}
+						} else {
+							if (velocity >= 0) {
 								continue;
 							}
 						}
-						else
-						{
-							if(velocity >= 0)
-							{
-								continue;
-							}
-						}
-						
-						//add penalties
+
+						// add penalties
 						int now = referee.getElapsedTime();
 						int delta = now - _lastPenalty[i];
 						_lastPenalty[i] = now;
-						if(delta > 2000) {
+						if (delta > 2000) {
 							_penalties += 20;
 						}
 					}
 				}
 			}
-			
-			//parse mechanical order
-			switch(order)
-			{
+
+			// Check forbidden areas
+			AABB p1;
+			AABB p2;
+
+			// Génération des zones de marquage de points
+			if (getIndex() == 1) {
+				p1 = new AABB(0.0, 2.0 - 1.1, 0.4, 2.0 - 0.5);
+				p2 = new AABB(1.65, 0, 1.95, 2.0 - 1.7);
+			} else {
+				p1 = new AABB(3.0 - 0.4, 2.0 - 1.1, 3.0, 2.0 - 0.5);
+				p2 = new AABB(1.05, 0, 1.35, 2.0 - 1.7);
+			}
+
+			List<DetectResult> res = new LinkedList<DetectResult>();
+			if (referee.getWorld().detect(p1, _body[i], true, res)) {
+				deactivateAndReset(referee, "You can not be in this area");
+			}
+			if (referee.getWorld().detect(p2, _body[i], true, res)) {
+				deactivateAndReset(referee, "You can not be in this area");
+			}
+
+			// parse mechanical order
+			switch (order) {
 			case "IDLE":
-				//Do nothing
+				// Do nothing
 				break;
-				
+
 			case "ACTIVATE_FRONT":
-				//prepare taking from front
+				// prepare taking from front
 				_mechanical_state[i] = MechanicalState.ACTIVATE_FRONT;
 				break;
-				
+
 			case "TAKE":
-				//take something
+				// take something
 				org.dyn4j.geometry.Circle circle;
-				switch(_mechanical_state[i])
-				{
+				switch (_mechanical_state[i]) {
 				case ACTIVATE_FRONT:
 					circle = new org.dyn4j.geometry.Circle(0.04);
 					circle.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
@@ -152,37 +164,36 @@ public class Player extends AbstractMultiplayerPlayer {
 						}
 					}
 					break;
-					
+
 				default:
 					break;
 				}
-				
+
 				_mechanical_state[i] = MechanicalState.IDLE;
 				break;
-				
+
 			case "RELEASE":
-				//take something
-				switch(_mechanical_state[i])
-				{
+				// take something
+				switch (_mechanical_state[i]) {
 				case ACTIVATE_FRONT:
-					if(_cupTaken != null) {
-						if(_cupTaken[i].size() > 0)
-						{
+					if (_cupTaken != null) {
+						if (_cupTaken[i].size() > 0) {
 							Eurobot2020Cup c = _cupTaken[i].pollLast();
-							c.addToTable(referee, _body[i].getTransform().getTransformed(new Vector2(0, 0.08 + _height_mm[i] / 2000.0)));
+							c.addToTable(referee, _body[i].getTransform()
+									.getTransformed(new Vector2(0, 0.08 + _height_mm[i] / 2000.0)));
 						}
 					}
 					break;
-					
+
 				default:
 					break;
 				}
-				
+
 				_mechanical_state[i] = MechanicalState.IDLE;
 				break;
-				
+
 			default:
-				this.deactivate("Invalid order '"+order+"'");
+				this.deactivate("Invalid order '" + order + "'");
 				break;
 			}
 		}
@@ -195,14 +206,14 @@ public class Player extends AbstractMultiplayerPlayer {
 
 	@SuppressWarnings("unchecked")
 	private void take(Referee referee, int robot, Eurobot2020Cup cup) {
-		if(_cupTaken == null) {
+		if (_cupTaken == null) {
 			_cupTaken = (LinkedList<Eurobot2020Cup>[]) new LinkedList<?>[2];
 			_cupTaken[0] = new LinkedList<Eurobot2020Cup>();
 			_cupTaken[1] = new LinkedList<Eurobot2020Cup>();
 		}
-		if(_cupTaken[robot].size() < 5) {
+		if (_cupTaken[robot].size() < 5) {
 			double x = -0.2 - 0.1 * _cupTaken[robot].size();
-			if(getIndex() != 0) {
+			if (getIndex() != 0) {
 				x = 3.0 - x;
 			}
 			cup.removeFromTable(referee, x, 0.5 - 0.25 * robot);
@@ -219,8 +230,42 @@ public class Player extends AbstractMultiplayerPlayer {
 		return _body;
 	}
 
+	public void deactivateAndReset(Referee referee, String reason) {
+		deactivate(reason);
+		reset(referee);
+		_fail = true;
+	}
+
+	public void reset(Referee referee) {
+		for (int i = 0; i < 2; i += 1) {
+			referee.getWorld().removeBody(_body[i]);
+			_body[i].translateToOrigin();
+			_body[i].rotate(-_body[i].getTransform().getRotationAngle());
+			if (getIndex() == 0) {
+				_body[i].rotate(-Math.PI / 2);
+				if (i == 0) {
+					_body[i].translate(0.4 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
+				} else {
+					_body[i].translate(0.0 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
+				}
+
+			} else {
+				_body[i].rotate(Math.PI / 2);
+				if (i == 0) {
+					_body[i].translate(3.0 - 0.4 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
+				} else {
+					_body[i].translate(3.0 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
+				}
+			}
+			_body[i].setLinearVelocity(new Vector2(0,0));
+			_body[i].setAngularVelocity(0);
+			referee.getWorld().addBody(_body[i]);
+		}
+	}
+
 	public void createBodies(Referee referee) {
 		int color;
+
 		// Detection de la couleur
 		if (getIndex() == 0) {
 			color = 0x007cb0;
@@ -244,39 +289,30 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].setAutoSleepingEnabled(false);
 			_body[i].setBullet(true);
 			_body[i].setUserData(this);
-			
-			if(getIndex() == 0)
-			{
-				_body[i].rotate(- Math.PI / 2);
-				if(i == 0)
-				{
+
+			if (getIndex() == 0) {
+				_body[i].rotate(-Math.PI / 2);
+				if (i == 0) {
 					_body[i].translate(0.4 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
-				}
-				else
-				{
+				} else {
 					_body[i].translate(0.0 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
 				}
-				
-			}
-			else
-			{
+
+			} else {
 				_body[i].rotate(Math.PI / 2);
-				if(i == 0)
-				{
+				if (i == 0) {
 					_body[i].translate(3.0 - 0.4 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
-				}
-				else
-				{
+				} else {
 					_body[i].translate(3.0 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
 				}
-				
+
 			}
-			
+
 			referee.getWorld().addBody(_body[i]);
-			
-			
+
 			// Dessin sur l'interface
-			com.codingame.gameengine.module.entities.Rectangle rectangle = referee.getGraphicEntityModule().createRectangle();
+			com.codingame.gameengine.module.entities.Rectangle rectangle = referee.getGraphicEntityModule()
+					.createRectangle();
 			rectangle.setWidth((int) _width_mm[i]).setHeight((int) _height_mm[i]);
 			rectangle.setLineColor(0x000000);
 			rectangle.setLineWidth(2);
@@ -284,8 +320,9 @@ public class Player extends AbstractMultiplayerPlayer {
 			rectangle.setX((int) (-_width_mm[i] / 2));
 			rectangle.setY((int) (-_height_mm[i] / 2));
 			Text text = referee.getGraphicEntityModule().createText(String.format("%d", i + 1));
-			text.setFontSize(64).setFontWeight(FontWeight.BOLD).setStrokeColor(0xFFFFFF).setFillColor(0xFFFFFF).setX(-16).setY(-32);
-			
+			text.setFontSize(64).setFontWeight(FontWeight.BOLD).setStrokeColor(0xFFFFFF).setFillColor(0xFFFFFF)
+					.setX(-16).setY(-32);
+
 			_graber[i] = referee.getGraphicEntityModule().createCircle();
 			_graber[i].setFillColor(0xFFFFFF);
 			_graber[i].setRadius(40);
@@ -293,7 +330,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			_graber[i].setFillAlpha(0.5);
 			_graber[i].setLineAlpha(0);
 			_graber[i].setVisible(false);
-			
+
 			_shape[i] = referee.getGraphicEntityModule().createGroup();
 			_shape[i].add(_graber[i]);
 			_shape[i].add(rectangle);
@@ -308,8 +345,8 @@ public class Player extends AbstractMultiplayerPlayer {
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(300);
 		_estimatedScoreArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(350);
-		_penaltiesArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
-				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(400);
+		_penaltiesArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF).setStrokeColor(0xFFFFFF)
+				.setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(400);
 	}
 
 	public void render(Referee referee) {
@@ -341,19 +378,17 @@ public class Player extends AbstractMultiplayerPlayer {
 			// Modification de la rotation car le repère de l'écran est indirect
 			rotation = 0 - rotation;
 			referee.displayShape(_shape[i], position, rotation, 1);
-		
-		
+
 			org.dyn4j.geometry.Circle circle;
-			//Affichage de la meca
-			switch(_mechanical_state[i])
-			{
+			// Affichage de la meca
+			switch (_mechanical_state[i]) {
 			case ACTIVATE_FRONT:
 				_graber[i].setVisible(true);
 				_graber[i].setLineWidth(0);
-				
+
 				circle = new org.dyn4j.geometry.Circle(0.04);
 				circle.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
-				//Recherche d'élements prenables
+				// Recherche d'élements prenables
 				LinkedList<DetectResult> results = new LinkedList<DetectResult>();
 				referee.getWorld().detect(circle, results);
 				for (DetectResult r : results) {
@@ -364,7 +399,7 @@ public class Player extends AbstractMultiplayerPlayer {
 					}
 				}
 				break;
-				
+
 			default:
 			case IDLE:
 				_graber[i].setVisible(false);
@@ -377,7 +412,7 @@ public class Player extends AbstractMultiplayerPlayer {
 		int score = 0;
 		int classical_score = 0;
 
-		if (_isOutOfStartingArea) {
+		if (_isOutOfStartingArea  && !_fail) {
 			score = 5;
 
 			AABB p1;
@@ -479,8 +514,8 @@ public class Player extends AbstractMultiplayerPlayer {
 
 			score += classical_score;
 			score -= _penalties;
-			
-			if(score < 0) {
+
+			if (score < 0) {
 				score = 0;
 			}
 		}
@@ -494,8 +529,10 @@ public class Player extends AbstractMultiplayerPlayer {
 
 	public void sendPlayerInputs() {
 		for (int i = 0; i < 2; i += 1) {
-			Vector2 left_encoder_position = _body[i].getTransform().getTransformed(new Vector2(-_width_mm[i] / 2000.0, 0));
-			Vector2 right_encoder_position = _body[i].getTransform().getTransformed(new Vector2(_width_mm[i] / 2000.0, 0));
+			Vector2 left_encoder_position = _body[i].getTransform()
+					.getTransformed(new Vector2(-_width_mm[i] / 2000.0, 0));
+			Vector2 right_encoder_position = _body[i].getTransform()
+					.getTransformed(new Vector2(_width_mm[i] / 2000.0, 0));
 
 			// calcul de l'encodeur gauche
 			int left_value;
@@ -525,15 +562,14 @@ public class Player extends AbstractMultiplayerPlayer {
 			// Ajout a l'intégrateur
 			_total_left_value[i] += left_value;
 			_total_right_value[i] += right_value;
-			
+
 			String last_taken = "?";
-			if(_cupTaken != null) {
-				if(_cupTaken[i].size() > 0) {
+			if (_cupTaken != null) {
+				if (_cupTaken[i].size() > 0) {
 					Eurobot2020Cup c = _cupTaken[i].peekLast();
-					if(c.getType() == Eurobot2020CupType.GREEN) {
+					if (c.getType() == Eurobot2020CupType.GREEN) {
 						last_taken = "GREEN";
-					}
-					else {
+					} else {
 						last_taken = "RED";
 					}
 				}
@@ -545,13 +581,12 @@ public class Player extends AbstractMultiplayerPlayer {
 	}
 
 	public void sendGameConfiguration() {
-		//send player color
+		// send player color
 		String color = "BLUE";
-		if(getIndex() == 1)
-		{
+		if (getIndex() == 1) {
 			color = "YELLOW";
 		}
-		
+
 		sendInputLine(color);
 	}
 }
