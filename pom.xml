@@ -32,6 +32,12 @@
 		</dependency>
 		
 		<dependency>
+			<groupId>com.codingame.gameengine</groupId>
+			<artifactId>module-toggle</artifactId>
+			<version>3.4.7</version>
+		</dependency>
+		
+		<dependency>
 		    <groupId>org.dyn4j</groupId>
 		    <artifactId>dyn4j</artifactId>
 		    <version>3.4.0</version>

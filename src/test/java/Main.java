@@ -6,7 +6,7 @@ public class Main {
         MultiplayerGameRunner gameRunner = new MultiplayerGameRunner();
         
         gameRunner.addAgent(Agent2.class);
-        gameRunner.addAgent(Agent2.class);
+        gameRunner.addAgent(BossHomologationP1.class);
         
         gameRunner.start();
     }

@@ -24,7 +24,7 @@ public class Agent2 {
 				{
 					order = "TAKE";
 				}
-				
+				/*
 				if(playerColor.equals("BLUE")) {
 					if (turn< 5) {
 						System.out.println("20 20 " + order);
@@ -41,8 +41,10 @@ public class Agent2 {
 						System.out.println("60 60 " + order);
 					}
 				}
+				*/
 				
-				System.out.println("0 0 IDLE");
+				System.out.println("100 100 IDLE");
+				System.out.println("100 100 IDLE");
 				System.out.println(score);
 				turn += 1;
 			}

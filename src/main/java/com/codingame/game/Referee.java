@@ -15,8 +15,10 @@ import com.codingame.gameengine.core.MultiplayerGameManager;
 import com.codingame.gameengine.module.entities.Curve;
 import com.codingame.gameengine.module.entities.Entity;
 import com.codingame.gameengine.module.entities.GraphicEntityModule;
+import com.codingame.gameengine.module.entities.Line;
 import com.codingame.gameengine.module.entities.Rectangle;
 import com.codingame.gameengine.module.entities.Text;
+import com.codingame.gameengine.module.toggle.ToggleModule;
 import com.codingame.view.AnimatedEventModule;
 import com.google.inject.Inject;
 
@@ -31,6 +33,8 @@ public class Referee extends AbstractReferee {
 	private GraphicEntityModule graphicEntityModule;
 	@Inject
 	private AnimatedEventModule animatedEventModule;
+	@Inject 
+	ToggleModule toggleModule;
 
 	private World _world;
 	private Text _time;
@@ -219,6 +223,40 @@ public class Referee extends AbstractReferee {
 		shape.setY((int) ((2022 - position.y) * scale) + offset_y, Curve.LINEAR);
 		shape.setRotation(rotation, Curve.LINEAR);
 	}
+	
+	public void displayLine(Line line, Vector2 position, double rotation, Curve curve) {
+		final int MARGIN_X = 100;
+		final int MARGIN_Y = 100;
+
+		// Lecture de la taille du monde
+		double w = graphicEntityModule.getWorld().getWidth() - 2 * MARGIN_X;
+		double h = graphicEntityModule.getWorld().getHeight() - 2 * MARGIN_Y;
+
+		// calcul de l'echelle et des offsets en position
+		double scale_w = w / (3000.0 + 22.0 + 22.0);
+		double scale_h = h / (2022.0 + 22.0 + 22.0);
+		double scale;
+		if (scale_w > scale_h) {
+			scale = scale_h;
+		} else {
+			scale = scale_w;
+		}
+
+		// calcul pour que le centre soit bien au centre
+		int offset_x = (int) (graphicEntityModule.getWorld().getWidth() / 2 - 1500 * scale);
+		int offset_y = MARGIN_Y;
+		
+		int oldx = line.getX();
+		int oldy = line.getY();
+
+		line.setScale(scale, Curve.NONE);
+		line.setX((int) (position.x * scale) + offset_x, Curve.LINEAR);
+		line.setY((int) ((2022 - position.y) * scale) + offset_y, Curve.LINEAR);
+		
+		line.setX2(line.getX2() + (line.getX() - oldx), curve);
+		line.setY2((line.getY2() + (line.getY() - oldy)), curve);
+		line.setRotation(rotation, Curve.LINEAR);
+	}
 
 	public World getWorld() {
 		return _world;
@@ -230,5 +268,9 @@ public class Referee extends AbstractReferee {
 
 	public int getElapsedTime() {
 		return _elapsedTime ;
+	}
+
+	public ToggleModule getToggleModule() {
+		return toggleModule;
 	}
 }

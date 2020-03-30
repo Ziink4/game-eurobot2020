@@ -50,6 +50,8 @@ public class Player extends AbstractMultiplayerPlayer {
 
 	private int _penalties;
 
+	private LinkedList<LinkedList<IRSensor>> _sensors = new LinkedList<LinkedList<IRSensor>>();
+
 	int getAction(Referee referee) throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
 		int i;
@@ -260,6 +262,10 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].setLinearVelocity(new Vector2(0,0));
 			_body[i].setAngularVelocity(0);
 			referee.getWorld().addBody(_body[i]);
+			_body[i].setLinearVelocity(new Vector2(0,0));
+			_body[i].setAngularVelocity(0);
+			_body[i].setLinearDamping(9999);
+			_body[i].setAngularDamping(9999);
 		}
 	}
 
@@ -289,7 +295,21 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].setAutoSleepingEnabled(false);
 			_body[i].setBullet(true);
 			_body[i].setUserData(this);
+			
+			LinkedList<IRSensor> irSensorList = new LinkedList<IRSensor>();
+			_sensors.add(irSensorList);
+			
+			double sensor_max_distance = 0.8;
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 0, sensor_max_distance, new Vector2(0, _height_mm[i]/2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 180, sensor_max_distance, new Vector2(0, -_height_mm[i]/2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 90, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, 0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, -90, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, 0)));
 
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
+			
 			if (getIndex() == 0) {
 				_body[i].rotate(-Math.PI / 2);
 				if (i == 0) {
@@ -350,7 +370,7 @@ public class Player extends AbstractMultiplayerPlayer {
 	}
 
 	public void render(Referee referee) {
-
+		
 		if (!_isOutOfStartingArea) {
 			// Detection si le robot est sorti !
 			AABB startarea = new AABB(0 + getIndex() * (3 - 0.4), 2.0 - 1.07, 0.4 + getIndex() * (3 - 0.4),
@@ -365,11 +385,19 @@ public class Player extends AbstractMultiplayerPlayer {
 
 		// Calcul du score
 		computeScore(referee);
+	
 
 		for (int i = 0; i < 2; i += 1) {
+			
+			//Compute sensor detection
+			for(IRSensor sensor : _sensors.get(i))
+			{
+				sensor.compute(referee, _body[i]);
+			}
+				
 			// Récupération de la position en mètres et la rotation en radians
-			Vector2 position = _body[i].getInitialTransform().getTranslation();
-			double rotation = _body[i].getInitialTransform().getRotationAngle();
+			Vector2 position = _body[i].getTransform().getTranslation();
+			double rotation = _body[i].getTransform().getRotationAngle();
 
 			// Converion en mm
 			position.x *= 1000;
