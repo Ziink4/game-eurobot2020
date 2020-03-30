@@ -67,8 +67,8 @@ public class Referee extends AbstractReferee {
 
 		// Création des robots
 		for (Player p : gameManager.getPlayers()) {
-			p.sendGameConfiguration();
 			p.createBodies(this);
+			p.sendGameConfiguration();
 		}
 
 		// Ajout des verres sur la table
@@ -137,7 +137,8 @@ public class Referee extends AbstractReferee {
 		body.translateToOrigin();
 		body.setMass(MassType.INFINITE);
 		body.translate((x0 + w / 2) / 1000.0, (y0 - h / 2) / 1000.0);
-
+		body.setBullet(true);
+		
 		_world.addBody(body);
 	}
 
@@ -173,6 +174,13 @@ public class Referee extends AbstractReferee {
 	private void sendPlayerInputs() {
 		for (Player p : gameManager.getActivePlayers()) {
 			p.sendPlayerInputs();
+		}
+		for (Player p : gameManager.getActivePlayers()) {
+			p.sendPlayerIRSensors();
+		}
+		for (Player p : gameManager.getActivePlayers()) {
+			p.sendPlayerLidarSensors();
+			p.execute();
 		}
 	}
 

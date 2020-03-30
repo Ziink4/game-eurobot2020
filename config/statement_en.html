@@ -40,19 +40,29 @@
       <div class="text">
 		<p>
 		    <span class="statement-lineno">Line 1:</span> <var>player_color</var><br>
+		    <span class="statement-lineno">Line 2:</span> <var>x</var> <var>y</var> <var>a</var> for robot 1<br>
+		    <span class="statement-lineno">Line 3:</span> <var>x</var> <var>y</var> <var>a</var> for robot 2<br>
 		     <ul>
 		      	<li><var>player_color</var> can be "BLUE" or "YELLOW"</li>
+		      	<li><var>x</var> and <var>y</var> are in mm</li>
+		      	<li><var>a</var> is in degree</li>
 		  	</ul>
 		</p>
 	  <div>
       <div class="title">Input for one game turn</div>
       <div class="text">
 		<p>
-		    <span class="statement-lineno">Line 1:</span> <var>player_color</var> <var>left_encoder</var> <var>right_encoder</var> <var>last_taken_color</var> for robot 1<br>
-		    <span class="statement-lineno">Line 2:</span> <var>player_color</var> <var>left_encoder</var> <var>right_encoder</var> <var>last_taken_color</var> for robot 2<br>
+		    <span class="statement-lineno">Line 1:</span> <var>left_encoder</var> <var>right_encoder</var> <var>last_taken_color</var> for robot 1<br>
+		    <span class="statement-lineno">Line 2:</span> <var>left_encoder</var> <var>right_encoder</var> <var>last_taken_color</var> for robot 2<br>
+		    <span class="statement-lineno">Line 3:</span> <var>front_low_sensor</var> <var>right_low_sensor</var> <var>back_low_sensor</var> <var>left_low_sensor</var> <var>front_left_low_sensor</var> <var>front_right_low_sensor</var> <var>back_right_low_sensor</var> <var>back_left_low_sensor</var> for robot 1<br>
+		    <span class="statement-lineno">Line 4:</span> <var>front_low_sensor</var> <var>right_low_sensor</var> <var>back_low_sensor</var> <var>left_low_sensor</var> <var>front_left_low_sensor</var> <var>front_right_low_sensor</var> <var>back_right_low_sensor</var> <var>back_left_low_sensor</var> for robot 2<br>  		    	
+		    <span class="statement-lineno">Line 5:</span> <var>lidar_data</var> for robot 1<br>
+		    <span class="statement-lineno">Line 6:</span> <var>lidar_data</var> for robot 2<br>
 		    <ul>
 		      	<li><var>left_encoder</var> and <var>right_encoder</var> are signed integers</li>
 		      	<li><var>last_taken_color</var> can be "?", "GREEN" or "RED"</li>
+		      	<li>sensor data are in mm</li>
+		      	<li><var>lidar_data</var> is in array of 360 integers
 		  	</ul>
 		</p>
 	  </div>

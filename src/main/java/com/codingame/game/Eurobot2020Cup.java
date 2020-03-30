@@ -34,6 +34,7 @@ public class Eurobot2020Cup {
 		_body.translate(x, y);
 		_body.setUserData(this);
 		_body.setLinearDamping(500);
+		_body.setBullet(true);
 		referee.getWorld().addBody(_body);
 		
 		// Dessin sur l'interface

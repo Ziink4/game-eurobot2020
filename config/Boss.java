@@ -3,21 +3,27 @@ import java.util.Scanner;
 class Player {
 	public static void main(String[] args) {
 		try (Scanner in = new Scanner(System.in)) {
-			String playerColor = in.next();
-			
 			int turn = 0;
 			int score = 0;
+			
+			System.err.println(in.nextLine());
+			for (int i = 0; i < 2; i++) {
+				System.err.println(in.nextLine());
+			}
+
 			// game loop
 			while (true) {
 				for (int i = 0; i < 2; i++) {
-					int leftEncoder = in.nextInt();
-					int rightEncoder = in.nextInt();
-					String lastTakenColor = in.next();
+					System.err.println(in.nextLine());
 				}
-				// Write an action using System.out.println()
-				// To debug: System.err.println("Debug messages...");
+				for (int i = 0; i < 2; i++) {
+					System.err.println(in.nextLine());
+				}
+				for (int i = 0; i < 2; i++) {
+					System.err.println(in.nextLine());
+				}
 
-				if (turn< 5) {
+				if (turn < 5) {
 					System.out.println("20 20 ACTIVATE_FRONT");
 				} else if (turn < 6) {
 					System.out.println("0 0 TAKE");

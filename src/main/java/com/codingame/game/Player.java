@@ -301,14 +301,14 @@ public class Player extends AbstractMultiplayerPlayer {
 			
 			double sensor_max_distance = 0.8;
 			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 0, sensor_max_distance, new Vector2(0, _height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 180, sensor_max_distance, new Vector2(0, -_height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 90, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, 0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 180, sensor_max_distance, new Vector2(0, -_height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, -90, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, 0)));
 
 			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
 			
 			if (getIndex() == 0) {
 				_body[i].rotate(-Math.PI / 2);
@@ -605,7 +605,6 @@ public class Player extends AbstractMultiplayerPlayer {
 
 			sendInputLine(_total_left_value[i] + " " + _total_right_value[i] + " " + last_taken);
 		}
-		execute();
 	}
 
 	public void sendGameConfiguration() {
@@ -616,5 +615,44 @@ public class Player extends AbstractMultiplayerPlayer {
 		}
 
 		sendInputLine(color);
+		
+		for(int i = 0; i < 2; i += 1) {
+			int x = (int) (_body[i].getTransform().getTranslationX() * 1000);
+			int y = (int) (_body[i].getTransform().getTranslationY() * 1000);
+			int a = (int) (_body[i].getTransform().getRotationAngle() * 180.0 / Math.PI);
+			a += 90;
+			a %= 360;
+			sendInputLine(x + " " + y + " " + a);
+		}
+	}
+
+	public void sendPlayerIRSensors() {
+		for (int i = 0; i < 2; i += 1) {
+			String str = null;
+			for(IRSensor s : _sensors.get(i)) {
+				if(str == null) {
+					str = "" + s.getDistance();
+				}
+				else {
+					str += " " + s.getDistance();
+				}
+			}
+			sendInputLine(str);
+		}
+	}
+
+	public void sendPlayerLidarSensors() {
+		for (int r = 0; r < 2; r += 1) {
+			String str = "";
+			for(int i = 0; i < 360; i += 1) {
+				if(i == 0) {
+					str = "" + 10;
+				}
+				else {
+					str += " " + 5;
+				}
+			}
+			sendInputLine(str);
+		}
 	}
 }

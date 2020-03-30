@@ -169,4 +169,8 @@ public class IRSensor {
 		}
 	}
 
+	public int getDistance() {
+		return (int) (_distance * 1000.0);
+	}
+
 }
