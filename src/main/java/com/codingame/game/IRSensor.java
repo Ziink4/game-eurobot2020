@@ -84,6 +84,7 @@ public class IRSensor {
 
 	private void updateDrawing(Referee referee, Body body) {
 		Vector2 pt = body.getWorldPoint(_local_position);
+		Curve curve;
 		
 		if (_distance > 0) {
 			_debugLine.setVisible(false);
@@ -95,13 +96,14 @@ public class IRSensor {
 			_debugLine.setX2((int) (0));
 			_debugLine.setY2((int) (-_distance * 1000));
 						
+			curve = Curve.LINEAR;
+			referee.displayLine(_debugLine, pt, -body.getTransform().getRotationAngle() - _rotation, curve);
+
 			_debugLine.setVisible(true);
-			
 		} else {
 			_debugLine.setVisible(false);
+			curve = Curve.NONE;
 		}
-		
-		referee.displayLine(_debugLine, pt, -body.getTransform().getRotationAngle() - _rotation, Curve.LINEAR);
 	}
 
 	public void compute(Referee referee, Body body) {
