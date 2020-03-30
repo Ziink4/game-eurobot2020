@@ -9,7 +9,7 @@ import org.dyn4j.geometry.Vector2;
 import com.codingame.gameengine.module.entities.Circle;
 import com.codingame.gameengine.module.entities.Group;
 
-public class Eurobot2020Cup {
+public class Eurobot2020Cup implements ZObject {
 
 	private Group _shape;
 	private Body _body;
@@ -60,7 +60,7 @@ public class Eurobot2020Cup {
 	public void render(Referee referee) {
 		// Récupération de la position en mètres
 		Vector2 position = _body.getTransform().getTranslation();
-
+		
 		// Converion en mm
 		position.x *= 1000;
 		position.y *= 1000;
@@ -84,6 +84,20 @@ public class Eurobot2020Cup {
 		_body.setAngularVelocity(0);
 		_body.setLinearVelocity(new Vector2(0, 0));
 		referee.getWorld().addBody(_body);
+	}
+
+	@Override
+	public boolean isVisibleBySensor(BodyFixture fixture, SensorType type) {
+		switch(type) {
+		case LOW:
+			return true;
+		case HIGH:
+			return false;
+		case VERY_HIGH:
+			return false;
+		}
+		
+		return false;
 	}
 
 }

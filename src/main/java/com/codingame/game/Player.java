@@ -20,7 +20,7 @@ import com.codingame.gameengine.module.entities.Group;
 import com.codingame.gameengine.module.entities.Text;
 import com.codingame.gameengine.module.entities.Text.FontWeight;
 
-public class Player extends AbstractMultiplayerPlayer {
+public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private enum MechanicalState {
 		IDLE, ACTIVATE_FRONT, TAKE,
 	}
@@ -47,7 +47,7 @@ public class Player extends AbstractMultiplayerPlayer {
 	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
 	private int[] _lastPenalty = { -50000, -50000 };
 	private Text _penaltiesArea;
-
+	private LidarSensor[] _lidars = {null, null};
 	private int _penalties;
 
 	private LinkedList<LinkedList<IRSensor>> _sensors = new LinkedList<LinkedList<IRSensor>>();
@@ -214,7 +214,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			_cupTaken[1] = new LinkedList<Eurobot2020Cup>();
 		}
 		if (_cupTaken[robot].size() < 5) {
-			double x = -0.2 - 0.1 * _cupTaken[robot].size();
+			double x = -0.3 - 0.1 * _cupTaken[robot].size();
 			if (getIndex() != 0) {
 				x = 3.0 - x;
 			}
@@ -296,10 +296,16 @@ public class Player extends AbstractMultiplayerPlayer {
 			_body[i].setBullet(true);
 			_body[i].setUserData(this);
 			
+			fixtureBody = new BodyFixture(new org.dyn4j.geometry.Circle(0.05));
+			fixtureBody.setSensor(true);
+			_body[i].addFixture(fixtureBody);
+			
 			LinkedList<IRSensor> irSensorList = new LinkedList<IRSensor>();
 			_sensors.add(irSensorList);
 			
 			double sensor_max_distance = 0.8;
+			double lidar_max_distance = 5;
+			
 			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 0, sensor_max_distance, new Vector2(0, _height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 90, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, 0)));
 			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 180, sensor_max_distance, new Vector2(0, -_height_mm[i]/2000.0)));
@@ -309,6 +315,8 @@ public class Player extends AbstractMultiplayerPlayer {
 			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
 			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
+			
+			_lidars[i] = new LidarSensor(referee, this, i, lidar_max_distance);
 			
 			if (getIndex() == 0) {
 				_body[i].rotate(-Math.PI / 2);
@@ -394,6 +402,7 @@ public class Player extends AbstractMultiplayerPlayer {
 			{
 				sensor.compute(referee, _body[i]);
 			}
+			_lidars[i].compute(referee, _body[i]);
 				
 			// Récupération de la position en mètres et la rotation en radians
 			Vector2 position = _body[i].getTransform().getTranslation();
@@ -646,13 +655,27 @@ public class Player extends AbstractMultiplayerPlayer {
 			String str = "";
 			for(int i = 0; i < 360; i += 1) {
 				if(i == 0) {
-					str = "" + 10;
+					str = "" + _lidars[r].getValue(i);
 				}
 				else {
-					str += " " + 5;
+					str += " " + _lidars[r].getValue(i);
 				}
 			}
 			sendInputLine(str);
 		}
+	}
+
+	@Override
+	public boolean isVisibleBySensor(BodyFixture fixture, SensorType type) {
+		switch(type) {
+		case LOW:
+			return true;
+		case HIGH:
+			return true;
+		case VERY_HIGH:
+			return fixture.isSensor();
+		}
+		
+		return false;
 	}
 }

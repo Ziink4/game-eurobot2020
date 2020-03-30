@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.dyn4j.dynamics.Body;
+import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.dynamics.DetectResult;
 import org.dyn4j.dynamics.RaycastResult;
 import org.dyn4j.geometry.AABB;
@@ -117,7 +118,7 @@ public class IRSensor {
 		_distance = _max_distance;
 
 		for (DetectResult r : bbres) {
-			if (validBody(body, r.getBody())) {
+			if (validBody(body, r.getBody(), r.getFixture())) {
 				_distance = 0;
 			}
 		}
@@ -135,7 +136,7 @@ public class IRSensor {
 			}
 
 			for (RaycastResult r : results) {
-				if (!validBody(body, r.getBody())) {
+				if (!validBody(body, r.getBody(), r.getFixture())) {
 					continue;
 				}
 				double d = r.getRaycast().getDistance();
@@ -148,21 +149,19 @@ public class IRSensor {
 		updateDrawing(referee, body);
 	}
 
-	private boolean validBody(Body self, Body tested) {
+	private boolean validBody(Body self, Body tested, BodyFixture fixture) {
 		if(self == tested) {
 			return false;
 		}
 		
-		if(_type == SensorType.LOW) {
-			return true;
+		if(tested.getUserData() == null) {
+			System.out.println("No userdata ?????");
+			return false;
 		}
 		else {
-			Object userdata = tested.getUserData();
+			ZObject obj = (ZObject) tested.getUserData();
 			
-			if(userdata == null) {
-				return false;
-			}
-			else if(userdata instanceof Player) {
+			if(obj.isVisibleBySensor(fixture, _type)) {
 				return true;
 			}
 			else {

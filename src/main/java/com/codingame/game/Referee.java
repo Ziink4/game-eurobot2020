@@ -54,16 +54,16 @@ public class Referee extends AbstractReferee {
 		_world.setGravity(World.ZERO_GRAVITY);
 
 		// Affichage du fond
-		displayShape(graphicEntityModule.createSprite().setImage("Background.jpg"), new Vector2(0, 2000), 0, 3);
+		displayShape(graphicEntityModule.createSprite().setImage("Table.png"), new Vector2(0-156, 2000+222), 0, 3);
 
 		// ajout des murs
-		createWall(-22, 0, 3044, 22);
-		createWall(-22, 2022, 22, 2044);
-		createWall(-22, 2022, 3044, 22);
-		createWall(3000, 2022, 22, 2044);
-		createWall(889, 150, 22, 172);
-		createWall(1489, 300, 22, 322);
-		createWall(2089, 150, 22, 172);
+		new Wall(this, -22, 0, 3044, 22);
+		new Wall(this, -22, 2022, 22, 2044);
+		new Wall(this, -22, 2022, 3044, 22);
+		new Wall(this, 3000, 2022, 22, 2044);
+		new Wall(this, 889, 150, 22, 172);
+		new Wall(this, 1489, 300, 22, 322);
+		new Wall(this, 2089, 150, 22, 172);
 
 		// Création des robots
 		for (Player p : gameManager.getPlayers()) {
@@ -122,25 +122,6 @@ public class Referee extends AbstractReferee {
 				.setX(graphicEntityModule.getWorld().getWidth() / 2 - 60).setY(10);
 	}
 
-	private void createWall(int x0, int y0, int w, int h) {
-		// Création du rectangle d'affichage
-		Rectangle wall = graphicEntityModule.createRectangle();
-		wall.setWidth(w).setHeight(h);
-		wall.setFillColor(0xb5b0a1);
-		displayShape(wall, new Vector2(x0, y0), 0, 1);
-
-		org.dyn4j.geometry.Rectangle shape = new org.dyn4j.geometry.Rectangle(((double) w) / 1000.0,
-				((double) h) / 1000.0);
-		BodyFixture fixtureBody = new BodyFixture(shape);
-		Body body = new Body();
-		body.addFixture(fixtureBody);
-		body.translateToOrigin();
-		body.setMass(MassType.INFINITE);
-		body.translate((x0 + w / 2) / 1000.0, (y0 - h / 2) / 1000.0);
-		body.setBullet(true);
-		
-		_world.addBody(body);
-	}
 
 	@Override
 	public void gameTurn(int turn) {
@@ -206,11 +187,12 @@ public class Referee extends AbstractReferee {
 
 	public void displayShape(Entity<?> shape, Vector2 position, double rotation, double generic_scale) {
 		final int MARGIN_X = 100;
-		final int MARGIN_Y = 100;
+		final int MARGIN_Y_TOP = 190;
+		final int MARGIN_Y_BOT = 10;
 
 		// Lecture de la taille du monde
 		double w = graphicEntityModule.getWorld().getWidth() - 2 * MARGIN_X;
-		double h = graphicEntityModule.getWorld().getHeight() - 2 * MARGIN_Y;
+		double h = graphicEntityModule.getWorld().getHeight() - MARGIN_Y_TOP - MARGIN_Y_BOT;
 
 		// calcul de l'echelle et des offsets en position
 		double scale_w = w / (3000.0 + 22.0 + 22.0);
@@ -224,7 +206,7 @@ public class Referee extends AbstractReferee {
 
 		// calcul pour que le centre soit bien au centre
 		int offset_x = (int) (graphicEntityModule.getWorld().getWidth() / 2 - 1500 * scale);
-		int offset_y = MARGIN_Y;
+		int offset_y = MARGIN_Y_TOP;
 
 		shape.setScale(scale * generic_scale, Curve.NONE);
 		shape.setX((int) (position.x * scale) + offset_x, Curve.LINEAR);
