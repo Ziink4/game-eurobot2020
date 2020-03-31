@@ -25,8 +25,8 @@ public class Eurobot2020Cup implements ZObject {
 		org.dyn4j.geometry.Circle shape = new org.dyn4j.geometry.Circle(0.072 / 2);
 		BodyFixture fixtureBody = new BodyFixture(shape);
 		fixtureBody.setDensity(2);
-		fixtureBody.setRestitution(0.1);
-		fixtureBody.setFriction(0.8);
+		fixtureBody.setRestitution(0);
+		fixtureBody.setFriction(6000);
 		_body.addFixture(fixtureBody);
 		_body.translateToOrigin();
 		_body.setMass(MassType.NORMAL);

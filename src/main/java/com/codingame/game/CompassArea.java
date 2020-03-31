@@ -14,7 +14,7 @@ public class CompassArea implements ZObject {
 		body.addFixture(fixtureBody);
 		body.translateToOrigin();
 		body.setMass(MassType.INFINITE);
-		body.translate(1.5, 2.0-0.026/2);
+		body.translate(1.5, 2.0 - 0.026 / 2);
 		body.setBullet(true);
 		body.setUserData(this);
 

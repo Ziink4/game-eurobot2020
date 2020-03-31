@@ -11,6 +11,8 @@ public class Wall implements ZObject {
 		org.dyn4j.geometry.Rectangle shape = new org.dyn4j.geometry.Rectangle(((double) w) / 1000.0,
 				((double) h) / 1000.0);
 		BodyFixture fixtureBody = new BodyFixture(shape);
+		fixtureBody.setRestitution(0);
+		fixtureBody.setFriction(2000);
 		Body body = new Body();
 		body.addFixture(fixtureBody);
 		body.translateToOrigin();

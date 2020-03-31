@@ -3,6 +3,9 @@ package com.codingame.game;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.dyn4j.collision.broadphase.BroadphaseDetector;
+import org.dyn4j.collision.broadphase.Sap;
+import org.dyn4j.collision.narrowphase.Sat;
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.dynamics.World;
@@ -57,7 +60,9 @@ public class Referee extends AbstractReferee {
 		_world = new World();
 		// _world.getSettings().setStepFrequency(FRAME_DURATION_ms / 1000);
 		_world.setGravity(World.ZERO_GRAVITY);
-
+		_world.setBroadphaseDetector(new Sap<Body, BodyFixture>());
+		_world.setNarrowphaseDetector(new Sat());
+		
 		// Display compass
 		_compass = graphicEntityModule.createGroup(graphicEntityModule.createSprite().setImage("Compass.png")
 				.setScale(0.25).setX(-150 / 4).setY(-150 / 4));
@@ -151,6 +156,10 @@ public class Referee extends AbstractReferee {
 			for (Player p : gameManager.getPlayers()) {
 				p.compute();
 			}
+		}
+		
+		if(Double.isNaN(gameManager.getPlayer(1).getBodies()[1].getTransform().getTranslationX())) {
+			gameManager.endGame();
 		}
 
 		//set compass
@@ -257,11 +266,12 @@ public class Referee extends AbstractReferee {
 
 	public void displayLine(Line line, Vector2 position, double rotation, Curve curve) {
 		final int MARGIN_X = 100;
-		final int MARGIN_Y = 100;
+		final int MARGIN_Y_TOP = 190;
+		final int MARGIN_Y_BOT = 10;
 
 		// Lecture de la taille du monde
 		double w = graphicEntityModule.getWorld().getWidth() - 2 * MARGIN_X;
-		double h = graphicEntityModule.getWorld().getHeight() - 2 * MARGIN_Y;
+		double h = graphicEntityModule.getWorld().getHeight() - MARGIN_Y_TOP - MARGIN_Y_BOT;
 
 		// calcul de l'echelle et des offsets en position
 		double scale_w = w / (3000.0 + 22.0 + 22.0);
@@ -275,7 +285,7 @@ public class Referee extends AbstractReferee {
 
 		// calcul pour que le centre soit bien au centre
 		int offset_x = (int) (graphicEntityModule.getWorld().getWidth() / 2 - 1500 * scale);
-		int offset_y = MARGIN_Y;
+		int offset_y = MARGIN_Y_TOP;
 
 		int oldx = line.getX();
 		int oldy = line.getY();

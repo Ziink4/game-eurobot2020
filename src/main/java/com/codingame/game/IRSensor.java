@@ -26,24 +26,32 @@ public class IRSensor {
 	private SensorType _type;
 
 	private static int ID = 0;
-	
+
 	public static int hsvToRgb(double d, double e, double g) {
 
-	    int h = (int)(d * 6) % 6;
-	    double f = d * 6 - h;
-	    double p = g * (1 - e);
-	    double q = g * (1 - f * e);
-	    double t = g * (1 - (1 - f) * e);
+		int h = (int) (d * 6) % 6;
+		double f = d * 6 - h;
+		double p = g * (1 - e);
+		double q = g * (1 - f * e);
+		double t = g * (1 - (1 - f) * e);
 
-	    switch (h) {
-	      case 0: return rgbToInt(g, t, p);
-	      case 1: return rgbToInt(q, g, p);
-	      case 2: return rgbToInt(p, g, t);
-	      case 3: return rgbToInt(p, q, g);
-	      case 4: return rgbToInt(t, p, g);
-	      case 5: return rgbToInt(g, p, q);
-	      default: throw new RuntimeException("Something went wrong when converting from HSV to RGB. Input was " + d + ", " + e + ", " + g);
-	    }
+		switch (h) {
+		case 0:
+			return rgbToInt(g, t, p);
+		case 1:
+			return rgbToInt(q, g, p);
+		case 2:
+			return rgbToInt(p, g, t);
+		case 3:
+			return rgbToInt(p, q, g);
+		case 4:
+			return rgbToInt(t, p, g);
+		case 5:
+			return rgbToInt(g, p, q);
+		default:
+			throw new RuntimeException(
+					"Something went wrong when converting from HSV to RGB. Input was " + d + ", " + e + ", " + g);
+		}
 	}
 
 	private static int rgbToInt(double r, double g, double b) {
@@ -51,8 +59,8 @@ public class IRSensor {
 		int bi = (int) (255 * g);
 		int gi = (int) (255 * b);
 		int value = (ri << 16) + (bi << 8) + gi;
-		
-		if(value > 0xFFFFFF) {
+
+		if (value > 0xFFFFFF) {
 			value = 0xFFFFFF;
 		}
 		return value;
@@ -62,7 +70,7 @@ public class IRSensor {
 			Vector2 local_position) {
 
 		_debugLine = referee.getGraphicEntityModule().createLine();
-		_debugLine.setLineWidth(32).setLineAlpha(0.7).setLineColor(hsvToRgb(Math.cos(ID) * 0.5 + 0.5,0.5,0.5));
+		_debugLine.setLineWidth(32).setLineAlpha(0.7).setLineColor(hsvToRgb(Math.cos(ID) * 0.5 + 0.5, 0.5, 0.5));
 		ID += 1;
 		_debugLine.setVisible(false);
 
@@ -71,32 +79,36 @@ public class IRSensor {
 		_local_position = local_position;
 		_rotation = rotation * Math.PI / 180.0;
 		_type = type;
-		
-		switch(type) {
-			case LOW:
-				referee.getToggleModule().displayOnToggleState(_debugLine, "showLowSensor", true);
-				break;
-				
-			case HIGH:
-				referee.getToggleModule().displayOnToggleState(_debugLine, "showHighSensor", true);
-				break;
+
+		switch (type) {
+		case LOW:
+			referee.getToggleModule().displayOnToggleState(_debugLine, "showLowSensor", true);
+			break;
+
+		case HIGH:
+			referee.getToggleModule().displayOnToggleState(_debugLine, "showHighSensor", true);
+			break;
+		case VERY_HIGH:
+			break;
+			
+		default:
+			break;
 		}
 	}
 
 	private void updateDrawing(Referee referee, Body body) {
 		Vector2 pt = body.getWorldPoint(_local_position);
 		Curve curve;
-		
+
 		if (_distance > 0) {
 			_debugLine.setVisible(false);
 
-			
 			pt.multiply(1000);
 			_debugLine.setX((int) (0));
 			_debugLine.setY((int) (0));
 			_debugLine.setX2((int) (0));
 			_debugLine.setY2((int) (-_distance * 1000));
-						
+
 			curve = Curve.LINEAR;
 			referee.displayLine(_debugLine, pt, -body.getTransform().getRotationAngle() - _rotation, curve);
 
@@ -127,11 +139,11 @@ public class IRSensor {
 			Vector2 direction = body.getWorldVector(new Vector2(0, 1).rotate(_rotation));
 			Ray ray = new Ray(body.getWorldPoint(_local_position), direction);
 			List<RaycastResult> results = new LinkedList<RaycastResult>();
-			
-			for(double a = -5; a <= 5; a += 0.5) {
+
+			for (double a = -5; a <= 5; a += 0.5) {
 				Vector2 ndir = new Vector2(direction).rotate(a * Math.PI / 180.0);
 				Ray nray = new Ray(ray.getStart(), ndir);
-			
+
 				referee.getWorld().raycast(nray, _max_distance, false, true, results);
 			}
 
@@ -150,21 +162,19 @@ public class IRSensor {
 	}
 
 	private boolean validBody(Body self, Body tested, BodyFixture fixture) {
-		if(self == tested) {
+		if (self == tested) {
 			return false;
 		}
-		
-		if(tested.getUserData() == null) {
+
+		if (tested.getUserData() == null) {
 			System.out.println("No userdata ?????");
 			return false;
-		}
-		else {
+		} else {
 			ZObject obj = (ZObject) tested.getUserData();
-			
-			if(obj.isVisibleBySensor(fixture, _type)) {
+
+			if (obj.isVisibleBySensor(fixture, _type)) {
 				return true;
-			}
-			else {
+			} else {
 				return false;
 			}
 		}

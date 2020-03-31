@@ -66,13 +66,13 @@ public class LidarSensor {
 			List<RaycastResult> results = new LinkedList<RaycastResult>();
 
 			for (double a = -0.33; a <= 0.33; a += 0.33) {
-				Vector2 ndir = new Vector2(direction).rotate((((double)i) + a) * Math.PI / 180.0);
+				Vector2 ndir = new Vector2(direction).rotate((((double) i) + a) * Math.PI / 180.0);
 				Ray nray = new Ray(ray.getStart(), ndir);
 
 				referee.getWorld().raycast(nray, _max_distance, false, true, results);
 			}
 
-			_distances [i] = _max_distance;
+			_distances[i] = _max_distance;
 			for (RaycastResult r : results) {
 				if (!validBody(body, r.getBody(), r.getFixture())) {
 					continue;
@@ -87,21 +87,19 @@ public class LidarSensor {
 	}
 
 	private boolean validBody(Body self, Body tested, BodyFixture fixture) {
-		if(self == tested) {
+		if (self == tested) {
 			return false;
 		}
-		
-		if(tested.getUserData() == null) {
+
+		if (tested.getUserData() == null) {
 			System.out.println("No userdata ?????");
 			return false;
-		}
-		else {
+		} else {
 			ZObject obj = (ZObject) tested.getUserData();
-			
-			if(obj.isVisibleBySensor(fixture, SensorType.VERY_HIGH)) {
+
+			if (obj.isVisibleBySensor(fixture, SensorType.VERY_HIGH)) {
 				return true;
-			}
-			else {
+			} else {
 				return false;
 			}
 		}

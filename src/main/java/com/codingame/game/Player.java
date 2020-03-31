@@ -1,10 +1,7 @@
 package com.codingame.game;
 
-import java.time.Duration;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Vector;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
@@ -12,6 +9,7 @@ import org.dyn4j.dynamics.DetectResult;
 import org.dyn4j.dynamics.RaycastResult;
 import org.dyn4j.dynamics.contact.ContactPoint;
 import org.dyn4j.geometry.AABB;
+import org.dyn4j.geometry.Convex;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Ray;
 import org.dyn4j.geometry.Rectangle;
@@ -52,6 +50,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private Text _penaltiesArea;
 	private LidarSensor[] _lidars = { null, null };
 	private int _penalties;
+	private LightHouse _lighthouse = null;
 
 	private LinkedList<LinkedList<IRSensor>> _sensors = new LinkedList<LinkedList<IRSensor>>();
 
@@ -152,15 +151,22 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				_mechanical_state[i] = MechanicalState.ACTIVATE_FRONT;
 				break;
 
-			case "TAKE":
+			case "TAKE": {
 				// take something
-				org.dyn4j.geometry.Circle circle;
+				Convex shape = null;
 				switch (_mechanical_state[i]) {
 				case ACTIVATE_FRONT:
-					circle = new org.dyn4j.geometry.Circle(0.04);
-					circle.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
+					shape = new org.dyn4j.geometry.Circle(0.04);
+					shape.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
+					break;
+
+				default:
+					break;
+				}
+
+				if (shape != null) {
 					LinkedList<DetectResult> results = new LinkedList<DetectResult>();
-					referee.getWorld().detect(circle, results);
+					referee.getWorld().detect(shape, results);
 					for (DetectResult r : results) {
 						if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
 							Eurobot2020Cup cup = (Eurobot2020Cup) r.getBody().getUserData();
@@ -168,13 +174,10 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 							break;
 						}
 					}
-					break;
-
-				default:
-					break;
 				}
 
 				_mechanical_state[i] = MechanicalState.IDLE;
+			}
 				break;
 
 			case "RELEASE":
@@ -195,6 +198,35 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				}
 
 				_mechanical_state[i] = MechanicalState.IDLE;
+				break;
+
+			case "LIGHT": {
+					// take something
+					Convex shape = null;
+					switch (_mechanical_state[i]) {
+					case ACTIVATE_FRONT:
+						shape = new org.dyn4j.geometry.Circle(0.04);
+						shape.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
+						break;
+
+					default:
+						break;
+					}
+
+					if (shape != null) {
+						LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+						referee.getWorld().detect(shape, results);
+						for (DetectResult r : results) {
+							if (r.getBody().getUserData() instanceof LightHouse) {
+								((LightHouse) r.getBody().getUserData()).activate();
+								break;
+							}
+						}
+					}
+
+					_mechanical_state[i] = MechanicalState.IDLE;
+
+				}
 				break;
 
 			default:
@@ -282,6 +314,8 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			color = 0xf7b500;
 		}
 
+		_lighthouse = new LightHouse(referee, getIndex());
+
 		for (int i = 0; i < 2; i += 1) {
 			// Corps pour le moteur physique
 			_body[i] = new Body();
@@ -291,13 +325,15 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			BodyFixture fixtureBody = new BodyFixture(shape);
 			fixtureBody.setDensity(200);
 			fixtureBody.setRestitution(0);
-			fixtureBody.setFriction(1);
+			fixtureBody.setFriction(10000);
 			_body[i].addFixture(fixtureBody);
 			_body[i].translateToOrigin();
 			_body[i].setMass(MassType.NORMAL);
 			_body[i].setAutoSleepingEnabled(false);
 			_body[i].setBullet(true);
 			_body[i].setUserData(this);
+			_body[i].setLinearDamping(0.1);
+			_body[i].setAngularDamping(0.001);
 
 			fixtureBody = new BodyFixture(new org.dyn4j.geometry.Circle(0.05));
 			fixtureBody.setSensor(true);
@@ -456,7 +492,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	private void computeScore(Referee referee) {
 		int score = 0;
-		int classical_score = 0;
+		int classical_score = 2; // for the light house
 
 		if (_isOutOfStartingArea && !_fail) {
 			score = 5;
@@ -573,7 +609,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				circS = new org.dyn4j.geometry.Circle(0.4);
 				circS.translate(3.0, 2.0 - 1.1);
 			}
-			
+
 			List<DetectResult> dboxN = new LinkedList<DetectResult>();
 			List<DetectResult> dcircN = new LinkedList<DetectResult>();
 			List<DetectResult> dboxS = new LinkedList<DetectResult>();
@@ -582,101 +618,84 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			referee.getWorld().detect(circN, dcircN);
 			referee.getWorld().detect(boxS, dboxS);
 			referee.getWorld().detect(circS, dcircS);
-			
-			//detect robot areas
+
+			// detect robot areas
 			int r0N = 0;
 			int r0S = 0;
 			int r1N = 0;
 			int r1S = 0;
-			for(DetectResult r : dboxN) {
-				if(r.getFixture().isSensor()) {
-					continue;
+			for (DetectResult r : dboxN) {
+				if (r.getBody() == _body[0]) {
+					r0N = 1;
 				}
-				if(r.getBody() == _body[0]) {
-					r0N += 1;
-				}
-				if(r.getBody() == _body[1]) {
-					r1N += 1;
+				if (r.getBody() == _body[1]) {
+					r1N = 1;
 				}
 			}
-			for(DetectResult r : dcircN) {
-				if(r.getFixture().isSensor()) {
-					continue;
+			for (DetectResult r : dcircN) {
+				if ((r.getBody() == _body[0]) && (r0N > 0)) {
+					r0N = 2;
 				}
-				if(r.getBody() == _body[0]) {
-					r0N += 1;
-				}
-				if(r.getBody() == _body[1]) {
-					r1N += 1;
+				if ((r.getBody() == _body[1]) && (r1N > 0)){
+					r1N = 2;
 				}
 			}
-			for(DetectResult r : dboxS) {
-				if(r.getFixture().isSensor()) {
-					continue;
+			for (DetectResult r : dboxS) {
+				if (r.getBody() == _body[0]) {
+					r0S = 1;
 				}
-				if(r.getBody() == _body[0]) {
-					r0S += 1;
-				}
-				if(r.getBody() == _body[1]) {
-					r1S += 1;
+				if (r.getBody() == _body[1]) {
+					r1S = 1;
 				}
 			}
-			for(DetectResult r : dcircS) {
-				if(r.getFixture().isSensor()) {
-					continue;
+			for (DetectResult r : dcircS) {
+				if ((r.getBody() == _body[0]) && (r0S > 0)) {
+					r0S = 2;
 				}
-				if(r.getBody() == _body[0]) {
-					r0S += 1;
+				if ((r.getBody() == _body[1]) && (r1S > 0)){
+					r1S = 2;
 				}
-				if(r.getBody() == _body[1]) {
-					r1S += 1;
+			}
+			//System.err.println(getIndex() + " "+ referee.getElapsedTime() + " " + r0N + " " + r1N + " " + r0S + " " + r1S);
+			int r0 = 0;
+			int r1 = 0;
+			if (r0N == 2) {
+				r0 = 1;
+			} else if (r0S == 2) {
+				r0 = -1;
+			}
+			if (r1N == 2) {
+				r1 = 1;
+			} else if (r1S == 2) {
+				r1 = -1;
+			}
+
+			if (referee.compassIsNorth()) {
+				if ((r0 == 1) && (r1 == 1)) {
+					classical_score += 10;
+				} else if ((r0 == 1) && (r1 == 0)) {
+					classical_score += 5;
+				} else if ((r0 == 0) && (r1 == 1)) {
+					classical_score += 5;
+				} else if ((r0 == -1) && (r1 == -1)) {
+					classical_score += 5;
+				}
+			} else {
+				if ((r0 == -1) && (r1 == -1)) {
+					classical_score += 10;
+				} else if ((r0 == -1) && (r1 == 0)) {
+					classical_score += 5;
+				} else if ((r0 == 0) && (r1 == -1)) {
+					classical_score += 5;
+				} else if ((r0 == 1) && (r1 == 1)) {
+					classical_score += 5;
 				}
 			}
 
-			int r0 = 0;
-			int r1 = 0;
-			if(r0N == 2) {
-				r0 = 1;
+			// add lighthouse
+			if (_lighthouse.isActivated()) {
+				classical_score += 13;
 			}
-			else if(r0S == 2) {
-				r0 = -1;
-			}
-			if(r1N == 2) {
-				r1 = 1;
-			}
-			else if(r1S == 2) {
-				r1 = -1;
-			}
-			
-			if(referee.compassIsNorth()) {
-				if((r0 == 1) && (r1 == 1)) {
-					classical_score += 10;
-				}
-				else if((r0 == 1) && (r1 == 0)) {
-					classical_score += 5;
-				}
-				else if((r0 == 0) && (r1 == 1)) {
-					classical_score += 5;
-				}
-				else if((r0 == -1) && (r1 == -1)) {
-					classical_score += 5;
-				}
-			}
-			else {
-				if((r0 == -1) && (r1 == -1)) {
-					classical_score += 10;
-				}
-				else if((r0 == -1) && (r1 == 0)) {
-					classical_score += 5;
-				}
-				else if((r0 == 0) && (r1 == -1)) {
-					classical_score += 5;
-				}
-				else if((r0 == 1) && (r1 == 1)) {
-					classical_score += 5;
-				}
-			}
-			
 
 			int bonus = (int) (Math.ceil(0.3 * classical_score) - Math.abs(_estimatedScore - classical_score));
 			if (bonus < 0) {
@@ -701,6 +720,16 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	public void compute() {
 		for (int i = 0; i < 2; i += 1) {
+			
+			if(Double.isNaN(_body[i].getTransform().getTranslationX())) {
+				//BUG DYN4J ??? Nan in transform...
+				_body[i].setTransform(_body[i].getInitialTransform());
+			}
+			else if(Double.isNaN(_body[i].getTransform().getValues()[0])) {
+				//BUG DYN4J ??? Nan in transform...
+				_body[i].setTransform(_body[i].getInitialTransform());
+			}
+			
 			Vector2 position = _body[i].getWorldPoint(new Vector2(0, 0));
 			Vector2 direction = _body[i].getWorldVector(new Vector2(1, 0));
 			double delta_d = 0;
