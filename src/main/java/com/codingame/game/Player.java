@@ -9,9 +9,11 @@ import java.util.Vector;
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.dynamics.DetectResult;
+import org.dyn4j.dynamics.RaycastResult;
 import org.dyn4j.dynamics.contact.ContactPoint;
 import org.dyn4j.geometry.AABB;
 import org.dyn4j.geometry.MassType;
+import org.dyn4j.geometry.Ray;
 import org.dyn4j.geometry.Rectangle;
 import org.dyn4j.geometry.Vector2;
 
@@ -33,8 +35,8 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	private double[] _width_mm = { 250, 250 };
 	private double[] _height_mm = { 150, 150 };
-	private Vector2[] _last_left_encoder_position = { null, null };
-	private Vector2[] _last_right_encoder_position = { null, null };
+	private Vector2[] _last_robot_position = { null, null };
+	private Vector2[] _last_robot_direction = { null, null };
 	private double[] _total_left_value = { 0, 0 };
 	private double[] _total_right_value = { 0, 0 };
 	private Text _scoreArea;
@@ -48,7 +50,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
 	private int[] _lastPenalty = { -50000, -50000 };
 	private Text _penaltiesArea;
-	private LidarSensor[] _lidars = {null, null};
+	private LidarSensor[] _lidars = { null, null };
 	private int _penalties;
 
 	private LinkedList<LinkedList<IRSensor>> _sensors = new LinkedList<LinkedList<IRSensor>>();
@@ -260,10 +262,10 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 					_body[i].translate(3.0 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
 				}
 			}
-			_body[i].setLinearVelocity(new Vector2(0,0));
+			_body[i].setLinearVelocity(new Vector2(0, 0));
 			_body[i].setAngularVelocity(0);
 			referee.getWorld().addBody(_body[i]);
-			_body[i].setLinearVelocity(new Vector2(0,0));
+			_body[i].setLinearVelocity(new Vector2(0, 0));
 			_body[i].setAngularVelocity(0);
 			_body[i].setLinearDamping(9999);
 			_body[i].setAngularDamping(9999);
@@ -296,29 +298,37 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			_body[i].setAutoSleepingEnabled(false);
 			_body[i].setBullet(true);
 			_body[i].setUserData(this);
-			
+
 			fixtureBody = new BodyFixture(new org.dyn4j.geometry.Circle(0.05));
 			fixtureBody.setSensor(true);
 			_body[i].addFixture(fixtureBody);
-			
+
 			LinkedList<IRSensor> irSensorList = new LinkedList<IRSensor>();
 			_sensors.add(irSensorList);
-			
+
 			double sensor_max_distance = 0.8;
 			double lidar_max_distance = 5;
-			
-			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 0, sensor_max_distance, new Vector2(0, _height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 90, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, 0)));
-			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 180, sensor_max_distance, new Vector2(0, -_height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, -90, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, 0)));
 
-			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, _height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
-			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance, new Vector2(-_width_mm[i]/2000.0, -_height_mm[i]/2000.0)));
-			
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 0, sensor_max_distance,
+					new Vector2(0, _height_mm[i] / 2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 90, sensor_max_distance,
+					new Vector2(_width_mm[i] / 2000.0, 0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, 180, sensor_max_distance,
+					new Vector2(0, -_height_mm[i] / 2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.LOW, this, i, -90, sensor_max_distance,
+					new Vector2(-_width_mm[i] / 2000.0, 0)));
+
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance,
+					new Vector2(-_width_mm[i] / 2000.0, _height_mm[i] / 2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 0, sensor_max_distance,
+					new Vector2(_width_mm[i] / 2000.0, _height_mm[i] / 2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance,
+					new Vector2(_width_mm[i] / 2000.0, -_height_mm[i] / 2000.0)));
+			irSensorList.add(new IRSensor(referee, SensorType.HIGH, this, i, 180, sensor_max_distance,
+					new Vector2(-_width_mm[i] / 2000.0, -_height_mm[i] / 2000.0)));
+
 			_lidars[i] = new LidarSensor(referee, this, i, lidar_max_distance);
-			
+
 			if (getIndex() == 0) {
 				_body[i].rotate(-Math.PI / 2);
 				if (i == 0) {
@@ -379,7 +389,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	}
 
 	public void render(Referee referee) {
-		
+
 		if (!_isOutOfStartingArea) {
 			// Detection si le robot est sorti !
 			AABB startarea = new AABB(0 + getIndex() * (3 - 0.4), 2.0 - 1.07, 0.4 + getIndex() * (3 - 0.4),
@@ -396,14 +406,13 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		computeScore(referee);
 
 		for (int i = 0; i < 2; i += 1) {
-			
-			//Compute sensor detection
-			for(IRSensor sensor : _sensors.get(i))
-			{
+
+			// Compute sensor detection
+			for (IRSensor sensor : _sensors.get(i)) {
 				sensor.compute(referee, _body[i]);
 			}
 			_lidars[i].compute(referee, _body[i]);
-				
+
 			// Récupération de la position en mètres et la rotation en radians
 			Vector2 position = _body[i].getTransform().getTranslation();
 			double rotation = _body[i].getTransform().getRotationAngle();
@@ -449,7 +458,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		int score = 0;
 		int classical_score = 0;
 
-		if (_isOutOfStartingArea  && !_fail) {
+		if (_isOutOfStartingArea && !_fail) {
 			score = 5;
 
 			AABB p1;
@@ -543,6 +552,132 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 			classical_score += red + green + 2 * Integer.min(red, green);
 
+			// compute stop area points
+			AABB boxN;
+			AABB boxS;
+			org.dyn4j.geometry.Circle circN;
+			org.dyn4j.geometry.Circle circS;
+
+			if (getIndex() == 0) {
+				boxN = new AABB(0, 2.0 - 0.5, 0.4, 2.0 - 0.1);
+				circN = new org.dyn4j.geometry.Circle(0.4);
+				circN.translate(0, 2.0 - 0.5);
+				boxS = new AABB(0, 2.0 - 1.5, 0.4, 2.0 - 1.1);
+				circS = new org.dyn4j.geometry.Circle(0.4);
+				circS.translate(0, 2.0 - 1.1);
+			} else {
+				boxN = new AABB(3 - 0.4, 2.0 - 0.5, 3, 2.0 - 0.1);
+				circN = new org.dyn4j.geometry.Circle(0.4);
+				circN.translate(3.0, 2.0 - 0.5);
+				boxS = new AABB(3 - 0.4, 2.0 - 1.5, 3, 2.0 - 1.1);
+				circS = new org.dyn4j.geometry.Circle(0.4);
+				circS.translate(3.0, 2.0 - 1.1);
+			}
+			
+			List<DetectResult> dboxN = new LinkedList<DetectResult>();
+			List<DetectResult> dcircN = new LinkedList<DetectResult>();
+			List<DetectResult> dboxS = new LinkedList<DetectResult>();
+			List<DetectResult> dcircS = new LinkedList<DetectResult>();
+			referee.getWorld().detect(boxN, dboxN);
+			referee.getWorld().detect(circN, dcircN);
+			referee.getWorld().detect(boxS, dboxS);
+			referee.getWorld().detect(circS, dcircS);
+			
+			//detect robot areas
+			int r0N = 0;
+			int r0S = 0;
+			int r1N = 0;
+			int r1S = 0;
+			for(DetectResult r : dboxN) {
+				if(r.getFixture().isSensor()) {
+					continue;
+				}
+				if(r.getBody() == _body[0]) {
+					r0N += 1;
+				}
+				if(r.getBody() == _body[1]) {
+					r1N += 1;
+				}
+			}
+			for(DetectResult r : dcircN) {
+				if(r.getFixture().isSensor()) {
+					continue;
+				}
+				if(r.getBody() == _body[0]) {
+					r0N += 1;
+				}
+				if(r.getBody() == _body[1]) {
+					r1N += 1;
+				}
+			}
+			for(DetectResult r : dboxS) {
+				if(r.getFixture().isSensor()) {
+					continue;
+				}
+				if(r.getBody() == _body[0]) {
+					r0S += 1;
+				}
+				if(r.getBody() == _body[1]) {
+					r1S += 1;
+				}
+			}
+			for(DetectResult r : dcircS) {
+				if(r.getFixture().isSensor()) {
+					continue;
+				}
+				if(r.getBody() == _body[0]) {
+					r0S += 1;
+				}
+				if(r.getBody() == _body[1]) {
+					r1S += 1;
+				}
+			}
+
+			int r0 = 0;
+			int r1 = 0;
+			if(r0N == 2) {
+				r0 = 1;
+			}
+			else if(r0S == 2) {
+				r0 = -1;
+			}
+			if(r1N == 2) {
+				r1 = 1;
+			}
+			else if(r1S == 2) {
+				r1 = -1;
+			}
+			
+			if(referee.compassIsNorth()) {
+				if((r0 == 1) && (r1 == 1)) {
+					classical_score += 10;
+				}
+				else if((r0 == 1) && (r1 == 0)) {
+					classical_score += 5;
+				}
+				else if((r0 == 0) && (r1 == 1)) {
+					classical_score += 5;
+				}
+				else if((r0 == -1) && (r1 == -1)) {
+					classical_score += 5;
+				}
+			}
+			else {
+				if((r0 == -1) && (r1 == -1)) {
+					classical_score += 10;
+				}
+				else if((r0 == -1) && (r1 == 0)) {
+					classical_score += 5;
+				}
+				else if((r0 == 0) && (r1 == -1)) {
+					classical_score += 5;
+				}
+				else if((r0 == 1) && (r1 == 1)) {
+					classical_score += 5;
+				}
+			}
+			
+
 			int bonus = (int) (Math.ceil(0.3 * classical_score) - Math.abs(_estimatedScore - classical_score));
 			if (bonus < 0) {
 				bonus = 0;
@@ -566,67 +701,31 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	public void compute() {
 		for (int i = 0; i < 2; i += 1) {
-			/*
-			Vector2 left_encoder_position = _body[i].getWorldPoint(new Vector2(-_width_mm[i] / 2000.0, 0));
-			Vector2 right_encoder_position = _body[i].getWorldPoint(new Vector2(_width_mm[i] / 2000.0, 0));
-
-			// calcul de l'encodeur gauche
-			int left_value;
-			if (_last_left_encoder_position[i] == null) {
-				left_value = 0;
-			} else {
-				
-				left_value = (int) (left_encoder_position.distance(_last_left_encoder_position[i]) * 10000);
-				if (_body[i].getLocalPoint(_last_left_encoder_position[i]).y >= 0) {
-					left_value = -left_value;
-				}
-			}
-
-			_last_left_encoder_position[i] = left_encoder_position;
-
-			// calcul de l'encodeur droit
-			int right_value;
-			if (_last_right_encoder_position[i] == null) {
-				right_value = 0;
-			} else {
-				right_value = (int) (right_encoder_position.distance(_last_right_encoder_position[i]) * 10000);
-				if (_body[i].getLocalPoint(_last_right_encoder_position[i]).y >= 0) {
-					right_value = -right_value;
-				}
-			}
-			_last_right_encoder_position[i] = right_encoder_position;
-			
-			*	// Ajout a l'intégrateur
-			_total_left_value[i] += left_value;
-			_total_right_value[i] += right_value;
-			*/
-			
 			Vector2 position = _body[i].getWorldPoint(new Vector2(0, 0));
 			Vector2 direction = _body[i].getWorldVector(new Vector2(1, 0));
 			double delta_d = 0;
 			double delta_a = 0;
-			
-			if(_last_left_encoder_position[i] != null) {
-				Vector2 dep = new Vector2(position).subtract(_last_left_encoder_position[i]);
-				if(_body[i].getLocalPoint(_last_left_encoder_position[i]).y <= 0) {
+
+			if (_last_robot_position[i] != null) {
+				Vector2 dep = new Vector2(position).subtract(_last_robot_position[i]);
+				if (_body[i].getLocalPoint(_last_robot_position[i]).y <= 0) {
 					delta_d = dep.getMagnitude();
-				}
-				else {
+				} else {
 					delta_d = -dep.getMagnitude();
 				}
-				
-				double angle = direction.getAngleBetween(_last_right_encoder_position[i]);
+
+				double angle = -direction.getAngleBetween(_last_robot_direction[i]);
 				delta_a = angle * (_width_mm[i] / 2000.0);
 			}
-			_last_left_encoder_position[i] = position;
-			_last_right_encoder_position[i] = direction;
+			_last_robot_position[i] = position;
+			_last_robot_direction[i] = direction;
 
 			// Ajout a l'intégrateur
 			_total_left_value[i] += delta_d - delta_a;
 			_total_right_value[i] += delta_d + delta_a;
 		}
 	}
-	
+
 	public void sendPlayerInputs(Referee referee) {
 		for (int i = 0; i < 2; i += 1) {
 			String last_taken = "?";
@@ -640,17 +739,40 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 					}
 				}
 			}
-			
-			String compass = "?";
-			if(referee.compassIsNorth()) {
-				compass = "N";
-			}
-			else {
-				compass = "S";
-			}
 
-			sendInputLine(Math.round(_total_left_value[i] * 10000.0) + " " + Math.round(_total_right_value[i] * 10000.0) + " " + last_taken + " " + compass);
+			String compass = readCompass(referee, i);
+
+			sendInputLine(Math.round(_total_left_value[i] * 10000.0) + " " + Math.round(_total_right_value[i] * 10000.0)
+					+ " " + last_taken + " " + compass);
 		}
+	}
+
+	private String readCompass(Referee referee, int i) {
+		String res = "?";
+
+		Vector2 direction = _body[i].getWorldVector(new Vector2(0, 1));
+		Ray ray = new Ray(_body[i].getWorldPoint(new Vector2()), direction);
+		List<RaycastResult> results = new LinkedList<RaycastResult>();
+
+		referee.getWorld().raycast(ray, 5.0, false, true, results);
+
+		double max_dist = 5.0;
+		for (RaycastResult r : results) {
+			if (r.getBody() == _body[i]) {
+				continue;
+			}
+			double d = r.getRaycast().getDistance();
+			if (d < max_dist) {
+				max_dist = d;
+				if (r.getBody().getUserData() instanceof CompassArea) {
+					res = referee.compassIsNorth() ? "N" : "S";
+				} else {
+					res = "?";
+				}
+			}
+		}
+
+		return res;
 	}
 
 	public void sendGameConfiguration() {
@@ -661,8 +783,8 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		}
 
 		sendInputLine(color);
-		
-		for(int i = 0; i < 2; i += 1) {
+
+		for (int i = 0; i < 2; i += 1) {
 			int x = (int) (_body[i].getTransform().getTranslationX() * 1000);
 			int y = (int) (_body[i].getTransform().getTranslationY() * 1000);
 			int a = (int) (_body[i].getTransform().getRotationAngle() * 180.0 / Math.PI);
@@ -675,11 +797,10 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	public void sendPlayerIRSensors() {
 		for (int i = 0; i < 2; i += 1) {
 			String str = null;
-			for(IRSensor s : _sensors.get(i)) {
-				if(str == null) {
+			for (IRSensor s : _sensors.get(i)) {
+				if (str == null) {
 					str = "" + s.getDistance();
-				}
-				else {
+				} else {
 					str += " " + s.getDistance();
 				}
 			}
@@ -690,11 +811,10 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	public void sendPlayerLidarSensors() {
 		for (int r = 0; r < 2; r += 1) {
 			String str = "";
-			for(int i = 0; i < 360; i += 1) {
-				if(i == 0) {
+			for (int i = 0; i < 360; i += 1) {
+				if (i == 0) {
 					str = "" + _lidars[r].getValue(i);
-				}
-				else {
+				} else {
 					str += " " + _lidars[r].getValue(i);
 				}
 			}
@@ -704,7 +824,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	@Override
 	public boolean isVisibleBySensor(BodyFixture fixture, SensorType type) {
-		switch(type) {
+		switch (type) {
 		case LOW:
 			return true;
 		case HIGH:
@@ -712,7 +832,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		case VERY_HIGH:
 			return fixture.isSensor();
 		}
-		
+
 		return false;
 	}
 }
