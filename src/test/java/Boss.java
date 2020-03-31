@@ -1,7 +1,7 @@
 import java.util.LinkedList;
 import java.util.Scanner;
 
-class Player {
+class Boss {
 	public static int ACUTAL_TIME_ms = 0;
 
 	public static class PID {
