@@ -15,8 +15,10 @@ import com.codingame.gameengine.core.MultiplayerGameManager;
 import com.codingame.gameengine.module.entities.Curve;
 import com.codingame.gameengine.module.entities.Entity;
 import com.codingame.gameengine.module.entities.GraphicEntityModule;
+import com.codingame.gameengine.module.entities.Group;
 import com.codingame.gameengine.module.entities.Line;
 import com.codingame.gameengine.module.entities.Rectangle;
+import com.codingame.gameengine.module.entities.Sprite;
 import com.codingame.gameengine.module.entities.Text;
 import com.codingame.gameengine.module.toggle.ToggleModule;
 import com.codingame.view.AnimatedEventModule;
@@ -33,13 +35,16 @@ public class Referee extends AbstractReferee {
 	private GraphicEntityModule graphicEntityModule;
 	@Inject
 	private AnimatedEventModule animatedEventModule;
-	@Inject 
+	@Inject
 	ToggleModule toggleModule;
 
 	private World _world;
 	private Text _time;
 	private LinkedList<Eurobot2020Cup> _cups = new LinkedList<Eurobot2020Cup>();
 	private int _elapsedTime = 0;
+	private Group _compass;
+	private boolean _compassIsNorth;
+	private double _compassEndRotation;
 
 	@Override
 	public void init() {
@@ -53,8 +58,17 @@ public class Referee extends AbstractReferee {
 		// _world.getSettings().setStepFrequency(FRAME_DURATION_ms / 1000);
 		_world.setGravity(World.ZERO_GRAVITY);
 
+		// Display compass
+		_compass = graphicEntityModule.createGroup(graphicEntityModule.createSprite().setImage("Compass.png")
+				.setScale(0.25).setX(-150 / 4).setY(-150 / 4));
+
+		_compass.setX(graphicEntityModule.getWorld().getWidth() / 2).setY(150);
+
+		_compassIsNorth = (Math.random() < 0.5);
+		_compassEndRotation = 15000 + Math.random() * 10000;
+
 		// Affichage du fond
-		displayShape(graphicEntityModule.createSprite().setImage("Table.png"), new Vector2(0-156, 2000+222), 0, 3);
+		displayShape(graphicEntityModule.createSprite().setImage("Table.png"), new Vector2(0 - 156, 2000 + 222), 0, 3);
 
 		// ajout des murs
 		new Wall(this, -22, 0, 3044, 22);
@@ -64,6 +78,7 @@ public class Referee extends AbstractReferee {
 		new Wall(this, 889, 150, 22, 172);
 		new Wall(this, 1489, 300, 22, 322);
 		new Wall(this, 2089, 150, 22, 172);
+		new CompassArea(this);
 
 		// Création des robots
 		for (Player p : gameManager.getPlayers()) {
@@ -74,21 +89,21 @@ public class Referee extends AbstractReferee {
 		// Ajout des verres sur la table
 		_cups.add(new Eurobot2020Cup(this, 0.67, 2 - 0.1, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 2.33, 2 - 0.1, Eurobot2020CupType.GREEN));
-		
+
 		_cups.add(new Eurobot2020Cup(this, 0.30, 2 - 0.4, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 0.95, 2 - 0.4, Eurobot2020CupType.GREEN));
 		_cups.add(new Eurobot2020Cup(this, 2.05, 2 - 0.4, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 2.70, 2 - 0.4, Eurobot2020CupType.GREEN));
-		
+
 		_cups.add(new Eurobot2020Cup(this, 0.45, 2 - 0.51, Eurobot2020CupType.GREEN));
 		_cups.add(new Eurobot2020Cup(this, 2.55, 2 - 0.51, Eurobot2020CupType.RED));
-		
+
 		_cups.add(new Eurobot2020Cup(this, 1.10, 2 - 0.8, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 1.90, 2 - 0.8, Eurobot2020CupType.GREEN));
-		
+
 		_cups.add(new Eurobot2020Cup(this, 0.45, 2 - 1.08, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 2.55, 2 - 1.08, Eurobot2020CupType.GREEN));
-		
+
 		_cups.add(new Eurobot2020Cup(this, 0.30, 2 - 1.2, Eurobot2020CupType.GREEN));
 		_cups.add(new Eurobot2020Cup(this, 0.95, 2 - 1.2, Eurobot2020CupType.GREEN));
 		_cups.add(new Eurobot2020Cup(this, 2.05, 2 - 1.2, Eurobot2020CupType.RED));
@@ -98,7 +113,7 @@ public class Referee extends AbstractReferee {
 		_cups.add(new Eurobot2020Cup(this, 1.335, 2 - 1.65, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 1.665, 2 - 1.65, Eurobot2020CupType.GREEN));
 		_cups.add(new Eurobot2020Cup(this, 1.935, 2 - 1.65, Eurobot2020CupType.RED));
-		
+
 		_cups.add(new Eurobot2020Cup(this, 1.005, 2 - 1.955, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 1.395, 2 - 1.955, Eurobot2020CupType.GREEN));
 		_cups.add(new Eurobot2020Cup(this, 1.605, 2 - 1.955, Eurobot2020CupType.RED));
@@ -122,19 +137,37 @@ public class Referee extends AbstractReferee {
 				.setX(graphicEntityModule.getWorld().getWidth() / 2 - 60).setY(10);
 	}
 
-
 	@Override
 	public void gameTurn(int turn) {
-		// Envoi des entrées aux joueurs
-		sendPlayerInputs();
-		readPlayerOutputs();
-
-		// Simulation du monde
-		_world.update(FRAME_DURATION_ms / 1000.0, -1, 1000);
 		_elapsedTime += FRAME_DURATION_ms;
+		
+	
+		
+				
+		// Simulation du monde
+		double delta_t = FRAME_DURATION_ms / 1000.0;
+		while(_world.update(delta_t, -1, 1)) {
+			delta_t = 0;
+			for (Player p : gameManager.getPlayers()) {
+				p.compute();
+			}
+		}
 
+		//set compass
+		if(compassRotationEnded() ) {
+			if(_compassIsNorth) {
+				_compass.setRotation(0);
+			}
+			else {
+				_compass.setRotation(Math.PI);
+			}
+		} else {
+			_compass.setRotation(_elapsedTime);
+		}
+		
 		// Mise a jour positions joueurs
 		for (Player p : gameManager.getPlayers()) {
+			p.compute();
 			p.render(this);
 		}
 
@@ -146,15 +179,23 @@ public class Referee extends AbstractReferee {
 		// Mise a jour du texte
 		_time.setText(String.format("%03d s", (int) (_elapsedTime / 1000)));
 
+		// Envoi des entrées aux joueurs
+		sendPlayerInputs();
+		readPlayerOutputs();
+		
 		// Détection de la fin du match
 		if (_elapsedTime > DUREE_MATCH_s * 1000) {
 			gameManager.endGame();
 		}
 	}
 
+	private boolean compassRotationEnded() {
+		return _elapsedTime >= _compassEndRotation;
+	}
+
 	private void sendPlayerInputs() {
 		for (Player p : gameManager.getActivePlayers()) {
-			p.sendPlayerInputs();
+			p.sendPlayerInputs(this);
 		}
 		for (Player p : gameManager.getActivePlayers()) {
 			p.sendPlayerIRSensors();
@@ -213,7 +254,7 @@ public class Referee extends AbstractReferee {
 		shape.setY((int) ((2022 - position.y) * scale) + offset_y, Curve.LINEAR);
 		shape.setRotation(rotation, Curve.LINEAR);
 	}
-	
+
 	public void displayLine(Line line, Vector2 position, double rotation, Curve curve) {
 		final int MARGIN_X = 100;
 		final int MARGIN_Y = 100;
@@ -235,14 +276,14 @@ public class Referee extends AbstractReferee {
 		// calcul pour que le centre soit bien au centre
 		int offset_x = (int) (graphicEntityModule.getWorld().getWidth() / 2 - 1500 * scale);
 		int offset_y = MARGIN_Y;
-		
+
 		int oldx = line.getX();
 		int oldy = line.getY();
 
 		line.setScale(scale, Curve.NONE);
 		line.setX((int) (position.x * scale) + offset_x, Curve.LINEAR);
 		line.setY((int) ((2022 - position.y) * scale) + offset_y, Curve.LINEAR);
-		
+
 		line.setX2(line.getX2() + (line.getX() - oldx), curve);
 		line.setY2((line.getY2() + (line.getY() - oldy)), curve);
 		line.setRotation(rotation, Curve.LINEAR);
@@ -257,10 +298,16 @@ public class Referee extends AbstractReferee {
 	}
 
 	public int getElapsedTime() {
-		return _elapsedTime ;
+		return _elapsedTime;
 	}
 
 	public ToggleModule getToggleModule() {
 		return toggleModule;
+	}
+
+	public boolean compassIsNorth() {
+		int rotation = (int) (_compass.getRotation() * 180.0 / Math.PI);
+		rotation %= 360;
+		return (rotation < 90) || (rotation >= 270);
 	}
 }

@@ -6,7 +6,8 @@ public class Agent1 {
 			int turn = 0;
 			int score = 0;
 			
-			System.err.println(in.nextLine());
+			String color = in.next();
+			in.nextLine();
 			for (int i = 0; i < 2; i++) {
 				System.err.println(in.nextLine());
 			}
@@ -29,8 +30,10 @@ public class Agent1 {
 					System.out.println("0 0 TAKE");
 				} else if (turn < 11) {
 					System.out.println("-20 -20 IDLE");
-				} else if (turn < 21) {
+				} else if (turn < 21 && color.equals("BLUE")) {
 					System.out.println("30 -30 ACTIVATE_FRONT");
+				}else if (turn < 21) {
+					System.out.println("-30 30 ACTIVATE_FRONT");
 				} else if (turn < 25) {
 					System.out.println("0 0 RELEASE");
 				} else if (turn < 26) {

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Vector;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
@@ -34,8 +35,8 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private double[] _height_mm = { 150, 150 };
 	private Vector2[] _last_left_encoder_position = { null, null };
 	private Vector2[] _last_right_encoder_position = { null, null };
-	private int[] _total_left_value = { 0, 0 };
-	private int[] _total_right_value = { 0, 0 };
+	private double[] _total_left_value = { 0, 0 };
+	private double[] _total_right_value = { 0, 0 };
 	private Text _scoreArea;
 	private boolean _isOutOfStartingArea = false;
 	private boolean _fail = false;
@@ -393,7 +394,6 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 		// Calcul du score
 		computeScore(referee);
-	
 
 		for (int i = 0; i < 2; i += 1) {
 			
@@ -564,20 +564,20 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		setScore(score);
 	}
 
-	public void sendPlayerInputs() {
+	public void compute() {
 		for (int i = 0; i < 2; i += 1) {
-			Vector2 left_encoder_position = _body[i].getTransform()
-					.getTransformed(new Vector2(-_width_mm[i] / 2000.0, 0));
-			Vector2 right_encoder_position = _body[i].getTransform()
-					.getTransformed(new Vector2(_width_mm[i] / 2000.0, 0));
+			/*
+			Vector2 left_encoder_position = _body[i].getWorldPoint(new Vector2(-_width_mm[i] / 2000.0, 0));
+			Vector2 right_encoder_position = _body[i].getWorldPoint(new Vector2(_width_mm[i] / 2000.0, 0));
 
 			// calcul de l'encodeur gauche
 			int left_value;
 			if (_last_left_encoder_position[i] == null) {
 				left_value = 0;
 			} else {
+				
 				left_value = (int) (left_encoder_position.distance(_last_left_encoder_position[i]) * 10000);
-				if (_body[i].getTransform().getInverseTransformed(_last_left_encoder_position[i]).y >= 0) {
+				if (_body[i].getLocalPoint(_last_left_encoder_position[i]).y >= 0) {
 					left_value = -left_value;
 				}
 			}
@@ -590,16 +590,45 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				right_value = 0;
 			} else {
 				right_value = (int) (right_encoder_position.distance(_last_right_encoder_position[i]) * 10000);
-				if (_body[i].getTransform().getInverseTransformed(_last_right_encoder_position[i]).y >= 0) {
+				if (_body[i].getLocalPoint(_last_right_encoder_position[i]).y >= 0) {
 					right_value = -right_value;
 				}
 			}
 			_last_right_encoder_position[i] = right_encoder_position;
-
-			// Ajout a l'intégrateur
+			
+			*	// Ajout a l'intégrateur
 			_total_left_value[i] += left_value;
 			_total_right_value[i] += right_value;
+			*/
+			
+			Vector2 position = _body[i].getWorldPoint(new Vector2(0, 0));
+			Vector2 direction = _body[i].getWorldVector(new Vector2(1, 0));
+			double delta_d = 0;
+			double delta_a = 0;
+			
+			if(_last_left_encoder_position[i] != null) {
+				Vector2 dep = new Vector2(position).subtract(_last_left_encoder_position[i]);
+				if(_body[i].getLocalPoint(_last_left_encoder_position[i]).y <= 0) {
+					delta_d = dep.getMagnitude();
+				}
+				else {
+					delta_d = -dep.getMagnitude();
+				}
+				
+				double angle = direction.getAngleBetween(_last_right_encoder_position[i]);
+				delta_a = angle * (_width_mm[i] / 2000.0);
+			}
+			_last_left_encoder_position[i] = position;
+			_last_right_encoder_position[i] = direction;
 
+			// Ajout a l'intégrateur
+			_total_left_value[i] += delta_d - delta_a;
+			_total_right_value[i] += delta_d + delta_a;
+		}
+	}
+	
+	public void sendPlayerInputs(Referee referee) {
+		for (int i = 0; i < 2; i += 1) {
 			String last_taken = "?";
 			if (_cupTaken != null) {
 				if (_cupTaken[i].size() > 0) {
@@ -611,8 +640,16 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 					}
 				}
 			}
+			
+			String compass = "?";
+			if(referee.compassIsNorth()) {
+				compass = "N";
+			}
+			else {
+				compass = "S";
+			}
 
-			sendInputLine(_total_left_value[i] + " " + _total_right_value[i] + " " + last_taken);
+			sendInputLine(Math.round(_total_left_value[i] * 10000.0) + " " + Math.round(_total_right_value[i] * 10000.0) + " " + last_taken + " " + compass);
 		}
 	}
 

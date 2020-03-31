@@ -4,36 +4,27 @@ import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.geometry.MassType;
 
-public class Wall implements ZObject {
+public class CompassArea implements ZObject {
 
-	public Wall(Referee referee, int x0, int y0, int w, int h) {
-		
-		org.dyn4j.geometry.Rectangle shape = new org.dyn4j.geometry.Rectangle(((double) w) / 1000.0,
-				((double) h) / 1000.0);
+	public CompassArea(Referee referee) {
+		org.dyn4j.geometry.Rectangle shape = new org.dyn4j.geometry.Rectangle(0.3, 0.026);
 		BodyFixture fixtureBody = new BodyFixture(shape);
+		fixtureBody.setSensor(true);
 		Body body = new Body();
 		body.addFixture(fixtureBody);
 		body.translateToOrigin();
 		body.setMass(MassType.INFINITE);
-		body.translate((x0 + w / 2) / 1000.0, (y0 - h / 2) / 1000.0);
+		body.translate(1.5, 2.0-0.026/2);
 		body.setBullet(true);
 		body.setUserData(this);
-		
+
 		referee.getWorld().addBody(body);
+
 	}
 
 	@Override
 	public boolean isVisibleBySensor(BodyFixture fixture, SensorType type) {
-		switch(type) {
-		case LOW:
-			return true;
-		case HIGH:
-			return false;
-		case VERY_HIGH:
-			return false;
-		}
-		
+
 		return false;
 	}
-
 }

@@ -3,7 +3,7 @@ loop 2 read x:int y:int angle:int
 
 gameloop
 
-loop 2 read leftEncoder:int rightEncoder:int lastTakenColor:word(5)
+loop 2 read leftEncoder:int rightEncoder:int lastTakenColor:word(5) detectedCompass:word(1)
 loop 2 read frontLowSensor:int rightLowSensor:int backLowSensor:int leftLowSensor:int FrontLeftHighSensor:int FrontRightHighSensor:int BackRightHighSensor:int BackLeftHighSensor:int
 loop 2 loopline 360 lidarData:int
 
