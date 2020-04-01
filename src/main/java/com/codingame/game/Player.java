@@ -18,15 +18,19 @@ import org.dyn4j.geometry.Vector2;
 import com.codingame.gameengine.core.AbstractMultiplayerPlayer;
 import com.codingame.gameengine.module.entities.Circle;
 import com.codingame.gameengine.module.entities.Group;
+import com.codingame.gameengine.module.entities.Sprite;
 import com.codingame.gameengine.module.entities.Text;
 import com.codingame.gameengine.module.entities.Text.FontWeight;
 
 public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private enum MechanicalState {
-		IDLE, ACTIVATE_FRONT, TAKE,
+		IDLE, ACTIVATE_FRONT, ACTIVATE_RIGHT, ACTIVATE_LEFT, TAKE,
 	}
 
 	private static final int OFFSET_W = 1610;
+	private static final int MAX_CUP_PER_ROBOT = 4;
+	private static final int SIDE_GRABBER_L_mm = 85;
+	private static final int SIDE_GRABBER_W_mm = 25;
 
 	private Body[] _body = { null, null };
 	private Group[] _shape = { null, null };
@@ -44,15 +48,20 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private Text _estimatedScoreArea;
 	private int _estimatedScore;
 	private MechanicalState[] _mechanical_state = { MechanicalState.IDLE, MechanicalState.IDLE };
-	private Circle[] _graber = { null, null };
+	private Circle[] _graberFront = { null, null };
+	private com.codingame.gameengine.module.entities.Rectangle[] _graberLeft = { null, null };
+	private com.codingame.gameengine.module.entities.Rectangle[] _graberRight = { null, null };
 	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
 	private int[] _lastPenalty = { -50000, -50000 };
 	private Text _penaltiesArea;
 	private LidarSensor[] _lidars = { null, null };
 	private int _penalties;
 	private LightHouse _lighthouse = null;
+	private WindSock[] _windsocks = { null, null };
 
 	private LinkedList<LinkedList<IRSensor>> _sensors = new LinkedList<LinkedList<IRSensor>>();
+
+	private Sprite[] _flag = { null, null };
 
 	int getAction(Referee referee) throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
@@ -151,18 +160,19 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				_mechanical_state[i] = MechanicalState.ACTIVATE_FRONT;
 				break;
 
+			case "ACTIVATE_LEFT":
+				// prepare taking from front
+				_mechanical_state[i] = MechanicalState.ACTIVATE_LEFT;
+				break;
+
+			case "ACTIVATE_RIGHT":
+				// prepare taking from front
+				_mechanical_state[i] = MechanicalState.ACTIVATE_RIGHT;
+				break;
+
 			case "TAKE": {
 				// take something
-				Convex shape = null;
-				switch (_mechanical_state[i]) {
-				case ACTIVATE_FRONT:
-					shape = new org.dyn4j.geometry.Circle(0.04);
-					shape.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
-					break;
-
-				default:
-					break;
-				}
+				Convex shape = getActionShape(i);
 
 				if (shape != null) {
 					LinkedList<DetectResult> results = new LinkedList<DetectResult>();
@@ -193,6 +203,26 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 					}
 					break;
 
+				case ACTIVATE_LEFT:
+					if (_cupTaken != null) {
+						if (_cupTaken[i].size() > 0) {
+							Eurobot2020Cup c = _cupTaken[i].pollLast();
+							c.addToTable(referee, _body[i].getTransform()
+									.getTransformed(new Vector2(-0.08 - _width_mm[i] / 2000.0, 0)));
+						}
+					}
+					break;
+
+				case ACTIVATE_RIGHT:
+					if (_cupTaken != null) {
+						if (_cupTaken[i].size() > 0) {
+							Eurobot2020Cup c = _cupTaken[i].pollLast();
+							c.addToTable(referee, _body[i].getTransform()
+									.getTransformed(new Vector2(0.08 + _width_mm[i] / 2000.0, 0)));
+						}
+					}
+					break;
+
 				default:
 					break;
 				}
@@ -201,32 +231,51 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				break;
 
 			case "LIGHT": {
-					// take something
-					Convex shape = null;
-					switch (_mechanical_state[i]) {
-					case ACTIVATE_FRONT:
-						shape = new org.dyn4j.geometry.Circle(0.04);
-						shape.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
-						break;
+				// take something
+				Convex shape = getActionShape(i);
 
-					default:
-						break;
-					}
-
-					if (shape != null) {
-						LinkedList<DetectResult> results = new LinkedList<DetectResult>();
-						referee.getWorld().detect(shape, results);
-						for (DetectResult r : results) {
-							if (r.getBody().getUserData() instanceof LightHouse) {
-								((LightHouse) r.getBody().getUserData()).activate();
-								break;
-							}
+				if (shape != null) {
+					LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+					referee.getWorld().detect(shape, results);
+					for (DetectResult r : results) {
+						if (r.getBody().getUserData() instanceof LightHouse) {
+							((LightHouse) r.getBody().getUserData()).activate();
+							break;
 						}
 					}
-
-					_mechanical_state[i] = MechanicalState.IDLE;
-
 				}
+
+				_mechanical_state[i] = MechanicalState.IDLE;
+
+			}
+				break;
+
+			case "WIND": {
+				// take something
+				Convex shape = getActionShape(i);
+
+				if (shape != null) {
+					LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+					referee.getWorld().detect(shape, results);
+					for (DetectResult r : results) {
+						if (r.getBody().getUserData() instanceof WindSock) {
+							((WindSock) r.getBody().getUserData()).activate();
+							break;
+						}
+					}
+				}
+
+				_mechanical_state[i] = MechanicalState.IDLE;
+
+			}
+				break;
+
+			case "FLAG":
+				_flag[i].setVisible(true);
+				if (referee.getElapsedTime() < 95000) {
+					this.deactivateAndReset(referee, "You can not show the flag before the 95 s");
+				}
+				_mechanical_state[i] = MechanicalState.IDLE;
 				break;
 
 			default:
@@ -241,6 +290,34 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		return 0;
 	}
 
+	private Convex getActionShape(int robot) {
+		Convex shape = null;
+		switch (_mechanical_state[robot]) {
+		case ACTIVATE_FRONT:
+			shape = new org.dyn4j.geometry.Circle(0.04);
+			shape.translate(_body[robot].getWorldPoint(new Vector2(0, _height_mm[robot] / 2000.0)));
+			break;
+
+		case ACTIVATE_LEFT:
+			shape = new org.dyn4j.geometry.Rectangle(_width_mm[robot] / 2000.0 + (SIDE_GRABBER_L_mm / 1000.0), SIDE_GRABBER_W_mm / 1000.0);
+			shape.rotate(_body[robot].getTransform().getRotationAngle());
+			shape.translate(
+					_body[robot].getTransform().getTransformed(new Vector2(-_width_mm[robot] / 4000.0 - (SIDE_GRABBER_L_mm / 1000.0), 0)));
+			break;
+
+		case ACTIVATE_RIGHT:
+			shape = new org.dyn4j.geometry.Rectangle(_width_mm[robot] / 2000.0 + (SIDE_GRABBER_L_mm / 1000.0), SIDE_GRABBER_W_mm / 1000.0);
+			shape.translate(
+					_body[robot].getTransform().getTransformed(new Vector2(_width_mm[robot] / 4000.0 + (SIDE_GRABBER_L_mm / 1000.0), 0)));
+			break;
+
+		default:
+			break;
+		}
+
+		return shape;
+	}
+
 	@SuppressWarnings("unchecked")
 	private void take(Referee referee, int robot, Eurobot2020Cup cup) {
 		if (_cupTaken == null) {
@@ -248,12 +325,12 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			_cupTaken[0] = new LinkedList<Eurobot2020Cup>();
 			_cupTaken[1] = new LinkedList<Eurobot2020Cup>();
 		}
-		if (_cupTaken[robot].size() < 5) {
+		if (_cupTaken[robot].size() < MAX_CUP_PER_ROBOT) {
 			double x = -0.3 - 0.1 * _cupTaken[robot].size();
 			if (getIndex() != 0) {
 				x = 3.0 - x;
 			}
-			cup.removeFromTable(referee, x, 0.5 - 0.25 * robot);
+			cup.removeFromTable(referee, x, 0.75 - 0.25 * robot);
 			_cupTaken[robot].add(cup);
 		}
 	}
@@ -315,6 +392,9 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		}
 
 		_lighthouse = new LightHouse(referee, getIndex());
+		for (int i = 0; i < 2; i += 1) {
+			_windsocks[i] = new WindSock(referee, getIndex(), i);
+		}
 
 		for (int i = 0; i < 2; i += 1) {
 			// Corps pour le moteur physique
@@ -398,30 +478,77 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			text.setFontSize(64).setFontWeight(FontWeight.BOLD).setStrokeColor(0xFFFFFF).setFillColor(0xFFFFFF)
 					.setX(-16).setY(-32);
 
-			_graber[i] = referee.getGraphicEntityModule().createCircle();
-			_graber[i].setFillColor(0xFFFFFF);
-			_graber[i].setRadius(40);
-			_graber[i].setY((int) (-_height_mm[i] / 2));
-			_graber[i].setFillAlpha(0.5);
-			_graber[i].setLineAlpha(0);
-			_graber[i].setVisible(false);
+			_graberFront[i] = referee.getGraphicEntityModule().createCircle();
+			_graberFront[i].setFillColor(0xFFFFFF);
+			_graberFront[i].setRadius(40);
+			_graberFront[i].setY((int) (-_height_mm[i] / 2));
+			_graberFront[i].setFillAlpha(0.5);
+			_graberFront[i].setLineAlpha(0);
+			_graberFront[i].setVisible(false);
+			
+			_graberLeft[i] = referee.getGraphicEntityModule().createRectangle();
+			_graberLeft[i].setFillColor(0xFFFFFF);
+			_graberLeft[i].setHeight(SIDE_GRABBER_W_mm);
+			_graberLeft[i].setY(-SIDE_GRABBER_W_mm/2);
+			_graberLeft[i].setWidth(SIDE_GRABBER_L_mm);
+			_graberLeft[i].setX((int) (-_width_mm[i] / 2 - SIDE_GRABBER_L_mm));
+			_graberLeft[i].setFillAlpha(0.5);
+			_graberLeft[i].setLineAlpha(0);
+			_graberLeft[i].setVisible(false);
+			
+			_graberRight[i] = referee.getGraphicEntityModule().createRectangle();
+			_graberRight[i].setFillColor(0xFFFFFF);
+			_graberRight[i].setHeight(SIDE_GRABBER_W_mm);
+			_graberRight[i].setWidth(SIDE_GRABBER_L_mm);
+			_graberRight[i].setX((int) (_width_mm[i] / 2));
+			_graberRight[i].setY(-SIDE_GRABBER_W_mm/2);
+			_graberRight[i].setFillAlpha(0.5);
+			_graberRight[i].setLineAlpha(0);
+			_graberRight[i].setVisible(false);
+
+			_flag[i] = referee.getGraphicEntityModule().createSprite().setImage("Flag_CO.png");
+			_flag[i].setScale(0.5).setX(-450 / 4).setY(-225 / 4);
+			_flag[i].setVisible(false);
 
 			_shape[i] = referee.getGraphicEntityModule().createGroup();
-			_shape[i].add(_graber[i]);
+			_shape[i].add(_graberFront[i]);
+			_shape[i].add(_graberLeft[i]);
+			_shape[i].add(_graberRight[i]);
 			_shape[i].add(rectangle);
 			_shape[i].add(text);
+			_shape[i].add(_flag[i]);
 		}
 
 		// Créations des textes
-		_scoreArea = referee.getGraphicEntityModule().createText("000").setFillColor(color).setStrokeColor(0xFFFFFF)
-				.setFontSize(128).setFontWeight(FontWeight.BOLDER).setX(35 + getIndex() * OFFSET_W).setY(25);
-
 		_regularScoreArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(300);
 		_estimatedScoreArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF)
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(350);
 		_penaltiesArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF).setStrokeColor(0xFFFFFF)
 				.setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(400);
+		_scoreArea = referee.getGraphicEntityModule().createText("000").setFillColor(color).setStrokeColor(0xFFFFFF)
+				.setFontSize(128).setFontWeight(FontWeight.BOLDER).setX(35).setY(35);
+
+		Text nickname = referee.getGraphicEntityModule().createText(getNicknameToken()).setX(0).setFontSize(42)
+				.setFontWeight(FontWeight.BOLDER).setFillColor(color).setStrokeColor(color);
+		Sprite avatar = referee.getGraphicEntityModule().createSprite().setImage(getAvatarToken());
+		avatar.setAnchorY(1);
+		avatar.setBaseHeight(150);
+		avatar.setBaseWidth(150);
+		avatar.setY(referee.getGraphicEntityModule().getWorld().getHeight());
+		nickname.setY(avatar.getY() - avatar.getBaseHeight() - 20);
+		nickname.setAnchorY(1);
+
+		if (getIndex() == 1) {
+			avatar.setAnchorX(1);
+			avatar.setX(referee.getGraphicEntityModule().getWorld().getWidth());
+
+			nickname.setAnchorX(1);
+			nickname.setX(referee.getGraphicEntityModule().getWorld().getWidth());
+
+			_scoreArea.setX(nickname.getX() - _scoreArea.getX());
+			_scoreArea.setAnchorX(1);
+		}
 	}
 
 	public void render(Referee referee) {
@@ -461,31 +588,61 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			rotation = 0 - rotation;
 			referee.displayShape(_shape[i], position, rotation, 1);
 
-			org.dyn4j.geometry.Circle circle;
+			Convex shape;
 			// Affichage de la meca
+			_graberRight[i].setLineWidth(0);
+			_graberFront[i].setLineWidth(0);
+			_graberLeft[i].setLineWidth(0);
 			switch (_mechanical_state[i]) {
 			case ACTIVATE_FRONT:
-				_graber[i].setVisible(true);
-				_graber[i].setLineWidth(0);
+				_graberFront[i].setVisible(true);
+				break;
 
-				circle = new org.dyn4j.geometry.Circle(0.04);
-				circle.translate(_body[i].getTransform().getTransformed(new Vector2(0, _height_mm[i] / 2000.0)));
-				// Recherche d'élements prenables
-				LinkedList<DetectResult> results = new LinkedList<DetectResult>();
-				referee.getWorld().detect(circle, results);
-				for (DetectResult r : results) {
-					if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
-						_graber[i].setLineColor(0);
-						_graber[i].setLineWidth(16);
-						break;
-					}
-				}
+			case ACTIVATE_LEFT:
+				_graberLeft[i].setVisible(true);
+				break;
+
+			case ACTIVATE_RIGHT:
+				_graberRight[i].setVisible(true);
 				break;
 
 			default:
 			case IDLE:
-				_graber[i].setVisible(false);
+				_graberFront[i].setVisible(false);
+				_graberLeft[i].setVisible(false);
+				_graberRight[i].setVisible(false);
 				break;
+			}
+			
+			shape = getActionShape(i);
+			if (shape != null) {
+				// Recherche d'élements prenables
+				LinkedList<DetectResult> results = new LinkedList<DetectResult>();
+				referee.getWorld().detect(shape, results);
+				for (DetectResult r : results) {
+					Object o = r.getBody().getUserData();
+					if ((o instanceof Eurobot2020Cup) || (o instanceof LightHouse) || (o instanceof WindSock)) {
+						switch (_mechanical_state[i]) {
+						case ACTIVATE_FRONT:
+							_graberFront[i].setLineColor(0);
+							_graberFront[i].setLineWidth(16);
+							_graberFront[i].setLineAlpha(1);
+							break;
+						case ACTIVATE_LEFT:
+							_graberLeft[i].setLineColor(0);
+							_graberLeft[i].setLineWidth(16);
+							_graberLeft[i].setLineAlpha(1);
+							break;
+						case ACTIVATE_RIGHT:
+							_graberRight[i].setLineColor(0);
+							_graberRight[i].setLineWidth(16);
+							_graberRight[i].setLineAlpha(1);
+							break;
+						default:
+							break;
+						}
+					}
+				}
 			}
 		}
 	}
@@ -636,7 +793,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				if ((r.getBody() == _body[0]) && (r0N > 0)) {
 					r0N = 2;
 				}
-				if ((r.getBody() == _body[1]) && (r1N > 0)){
+				if ((r.getBody() == _body[1]) && (r1N > 0)) {
 					r1N = 2;
 				}
 			}
@@ -652,11 +809,12 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				if ((r.getBody() == _body[0]) && (r0S > 0)) {
 					r0S = 2;
 				}
-				if ((r.getBody() == _body[1]) && (r1S > 0)){
+				if ((r.getBody() == _body[1]) && (r1S > 0)) {
 					r1S = 2;
 				}
 			}
-			//System.err.println(getIndex() + " "+ referee.getElapsedTime() + " " + r0N + " " + r1N + " " + r0S + " " + r1S);
+			// System.err.println(getIndex() + " "+ referee.getElapsedTime() + " " + r0N + "
+			// " + r1N + " " + r0S + " " + r1S);
 			int r0 = 0;
 			int r1 = 0;
 			if (r0N == 2) {
@@ -697,6 +855,18 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				classical_score += 13;
 			}
 
+			// show flag
+			if (_flag[0].isVisible() || _flag[1].isVisible()) {
+				classical_score += 10;
+			}
+
+			// winsocks
+			if (_windsocks[0].isActivated() && _windsocks[1].isActivated()) {
+				classical_score += 15;
+			} else if (_windsocks[0].isActivated() || _windsocks[1].isActivated()) {
+				classical_score += 5;
+			}
+
 			int bonus = (int) (Math.ceil(0.3 * classical_score) - Math.abs(_estimatedScore - classical_score));
 			if (bonus < 0) {
 				bonus = 0;
@@ -720,16 +890,15 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	public void compute() {
 		for (int i = 0; i < 2; i += 1) {
-			
-			if(Double.isNaN(_body[i].getTransform().getTranslationX())) {
-				//BUG DYN4J ??? Nan in transform...
+
+			if (Double.isNaN(_body[i].getTransform().getTranslationX())) {
+				// BUG DYN4J ??? Nan in transform...
+				_body[i].setTransform(_body[i].getInitialTransform());
+			} else if (Double.isNaN(_body[i].getTransform().getValues()[0])) {
+				// BUG DYN4J ??? Nan in transform...
 				_body[i].setTransform(_body[i].getInitialTransform());
 			}
-			else if(Double.isNaN(_body[i].getTransform().getValues()[0])) {
-				//BUG DYN4J ??? Nan in transform...
-				_body[i].setTransform(_body[i].getInitialTransform());
-			}
-			
+
 			Vector2 position = _body[i].getWorldPoint(new Vector2(0, 0));
 			Vector2 direction = _body[i].getWorldVector(new Vector2(1, 0));
 			double delta_d = 0;

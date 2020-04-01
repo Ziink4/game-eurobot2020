@@ -1,7 +1,6 @@
 import java.util.LinkedList;
 import java.util.Scanner;
 
-
 class Player {
 	public static int ACUTAL_TIME_ms = 0;
 
@@ -48,7 +47,7 @@ class Player {
 	}
 
 	public static enum MecaState {
-		IDLE, ACTIVATE_FRONT, TAKE, LIGHT,
+		IDLE, ACTIVATE_FRONT, TAKE, LIGHT, FLAG,
 	}
 
 	public static class Trajectory {
@@ -65,6 +64,7 @@ class Player {
 			private boolean _initialized;
 			private double _start_angle;
 			private int _start_time;
+			private int _maxtime = -1;
 
 			public TrajectoryOrder(Trajectory trajectory) {
 				_trajectory = trajectory;
@@ -75,12 +75,12 @@ class Player {
 				_trajectory.addOrder(this);
 			}
 
-			public void initialize(double distance, double angle, double x, double y) {
+			public void initialize(int time, double distance, double angle, double x, double y) {
 				_start_distance = distance;
 				_start_angle = angle;
 				_start_x = x;
 				_start_y = y;
-				_start_time = ACUTAL_TIME_ms;
+				_start_time = time;
 				_initialized = true;
 			}
 
@@ -93,7 +93,7 @@ class Player {
 			}
 
 			public int maxTime() {
-				return -1;
+				return _maxtime;
 			}
 
 			public int getStartTime() {
@@ -115,6 +115,11 @@ class Player {
 			protected double getEstimatedDistanceBeforeStop() {
 				// TODO Auto-generated method stub
 				return 0;
+			}
+
+			public TrajectoryOrder setMaxTime(int max) {
+				_maxtime = max;
+				return this;
 			}
 		}
 
@@ -161,6 +166,26 @@ class Player {
 				return TrajectoryStatus.ORDER_IN_PROGRESS;
 			}
 
+		}
+
+		public static class TrajectoryOrderMeca extends TrajectoryOrder {
+
+			private MecaState _state;
+
+			public TrajectoryOrderMeca(Trajectory trajectory) {
+				super(trajectory);
+			}
+
+			public TrajectoryOrder setState(MecaState state) {
+				_state = state;
+				return this;
+			}
+
+			@Override
+			public TrajectoryStatus compute() {
+				getTrajectory().getRobot().setMeca(_state);
+				return TrajectoryStatus.ORDER_DONE;
+			}
 		}
 
 		public static class TrajectoryOrderGotoA extends TrajectoryOrder {
@@ -248,7 +273,7 @@ class Player {
 			_estimations_need_recompute = true;
 		}
 
-		public void compute() {
+		public void compute(int current_time_ms) {
 			if (_estimations_need_recompute) {
 				compute_estimations();
 				_estimations_need_recompute = false;
@@ -261,12 +286,12 @@ class Player {
 				// check if order is new
 				if (!order.isInitialized()) {
 					// set real start values
-					order.initialize(_robot.getDistance(), _robot.getAngle(), _robot.getX(), _robot.getY());
+					order.initialize(current_time_ms, _robot.getDistance(), _robot.getAngle(), _robot.getX(), _robot.getY());
 				}
 				TrajectoryStatus status = order.compute();
 
 				if (order.maxTime() >= 0) {
-					if (ACUTAL_TIME_ms - order.getStartTime() > order.maxTime()) {
+					if (current_time_ms - order.getStartTime() > order.maxTime()) {
 						status = TrajectoryStatus.ORDER_DONE;
 						_result = TrajectoryStatus.TIMEOUT_BEFORE_END;
 
@@ -305,6 +330,10 @@ class Player {
 		public void removeAllOrders() {
 			_orders.clear();
 			_estimations_need_recompute = true;
+		}
+
+		public TrajectoryOrder meca(MecaState state) {
+			return new TrajectoryOrderMeca(this).setState(state);
 		}
 	}
 
@@ -375,14 +404,14 @@ class Player {
 			_y += _deltaDistance * TICK_TO_MM * Math.sin(Math.toRadians(_angle));
 		}
 
-		public String getOutputs() {
-			compute();
+		public String getOutputs(int current_time_ms) {
+			compute(current_time_ms);
 
 			return _left_motor + " " + _right_motor + " " + _meca.toString();
 		}
 
-		private void compute() {
-			_trajectory.compute();
+		private void compute(int current_time_ms) {
+			_trajectory.compute(current_time_ms);
 			_pid_dist.compute(_distance);
 			_pid_angu.compute(_angle);
 
@@ -418,7 +447,7 @@ class Player {
 		}
 
 		public void setMeca(MecaState meca) {
-			_meca  = meca;
+			_meca = meca;
 		}
 
 	}
@@ -427,6 +456,7 @@ class Player {
 		try (Scanner in = new Scanner(System.in)) {
 			int turn = 0;
 			int score = 2;
+			boolean flag = false;
 			Robot[] robots = { null, null };
 
 			boolean goto_compass = false;
@@ -471,75 +501,12 @@ class Player {
 					}
 				}
 
-				if (turn == 0) {
-					if (playerColor.equals("BLUE")) {
-						robots[0].getTrajectory().gotoD(1500 - robots[0].getX()).run();
-					} else {
-						robots[0].getTrajectory().gotoD(robots[0].getX() - 1500).run();
-					}
-					robots[0].getTrajectory().gotoA(90).run();
-					robots[0].setMeca(MecaState.ACTIVATE_FRONT);
-				} else if (turn == 3) {
-					robots[0].setMeca(MecaState.LIGHT);
-					robots[1].getTrajectory().gotoD(100).run();
-					robots[1].getTrajectory().gotoA(90).run();
-					robots[1].getTrajectory().gotoD(500).run();
-					if (playerColor.equals("BLUE")) {
-						robots[1].getTrajectory().gotoA(0).run();
-					} else {
-						robots[1].getTrajectory().gotoA(180).run();
-					}
-					robots[1].getTrajectory().gotoD(200).run();
-					robots[1].getTrajectory().gotoD(-200).run();
-					robots[1].getTrajectory().gotoA(90).run();
-					robots[1].getTrajectory().gotoD(400).run();
-				} else if (turn == 70) {
-					robots[1].getTrajectory().removeAllOrders();
-					robots[1].setMeca(MecaState.ACTIVATE_FRONT);
-				} else if (turn == 71) {
-					robots[1].setMeca(MecaState.LIGHT);
-					score += 13;
-				} else if (turn == 72) {
-					robots[1].getTrajectory().gotoD(-700).run();
-				} else if (compass != null && !goto_compass) {
-					goto_compass = true;
-					if (compass.equals("N")) {
-						if (playerColor.equals("BLUE")) {
-							robots[0].getTrajectory().gotoA(180).run();
-							robots[0].getTrajectory().gotoD(1300).run();
-							robots[0].getTrajectory().gotoA(90).run();
-							robots[0].getTrajectory().gotoD(500).run();
-							robots[1].getTrajectory().gotoD(500).run();
-						} else {
-							robots[0].getTrajectory().gotoA(0).run();
-							robots[0].getTrajectory().gotoD(1300).run();
-							robots[0].getTrajectory().gotoA(90).run();
-							robots[0].getTrajectory().gotoD(500).run();
-							robots[1].getTrajectory().gotoD(500).run();
-						}
-					} else {
-						if (playerColor.equals("BLUE")) {
-							robots[0].getTrajectory().gotoA(180).run();
-							robots[0].getTrajectory().gotoD(1300).run();
-							robots[0].getTrajectory().gotoA(-90).run();
-							robots[0].getTrajectory().gotoD(500).run();
-							robots[1].getTrajectory().gotoD(-500).run();
-						} else {
-							robots[0].getTrajectory().gotoA(0).run();
-							robots[0].getTrajectory().gotoD(1300).run();
-							robots[0].getTrajectory().gotoA(-90).run();
-							robots[0].getTrajectory().gotoD(500).run();
-							robots[1].getTrajectory().gotoD(-500).run();
-						}
-					}
-
-					score += 10;
-				} else {
-
+				if (turn == 0) {					
+					robots[0].getTrajectory().gotoD(500).run();
 				}
 
 				for (int i = 0; i < 2; i++) {
-					System.out.println(robots[i].getOutputs());
+					System.out.println(robots[i].getOutputs(ACUTAL_TIME_ms));
 				}
 				System.out.println(score);
 				turn += 1;

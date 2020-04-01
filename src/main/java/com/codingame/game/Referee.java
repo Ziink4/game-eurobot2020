@@ -2,6 +2,7 @@ package com.codingame.game;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 import org.dyn4j.collision.broadphase.BroadphaseDetector;
 import org.dyn4j.collision.broadphase.Sap;
@@ -60,9 +61,9 @@ public class Referee extends AbstractReferee {
 		_world = new World();
 		// _world.getSettings().setStepFrequency(FRAME_DURATION_ms / 1000);
 		_world.setGravity(World.ZERO_GRAVITY);
-		_world.setBroadphaseDetector(new Sap<Body, BodyFixture>());
-		_world.setNarrowphaseDetector(new Sat());
-		
+		//_world.setBroadphaseDetector(new Sap<Body, BodyFixture>());
+		//_world.setNarrowphaseDetector(new Sat());
+
 		// Display compass
 		_compass = graphicEntityModule.createGroup(graphicEntityModule.createSprite().setImage("Compass.png")
 				.setScale(0.25).setX(-150 / 4).setY(-150 / 4));
@@ -71,6 +72,7 @@ public class Referee extends AbstractReferee {
 
 		_compassIsNorth = (Math.random() < 0.5);
 		_compassEndRotation = 15000 + Math.random() * 10000;
+		//System.out.println("COMPASS: " + (_compassIsNorth ? "N" : "S") + " - " + _compassEndRotation + "ms");
 
 		// Affichage du fond
 		displayShape(graphicEntityModule.createSprite().setImage("Table.png"), new Vector2(0 - 156, 2000 + 222), 0, 3);
@@ -83,6 +85,13 @@ public class Referee extends AbstractReferee {
 		new Wall(this, 889, 150, 22, 172);
 		new Wall(this, 1489, 300, 22, 322);
 		new Wall(this, 2089, 150, 22, 172);
+		new FixedBeacon(this, -50 - 22, 2000 - 50);
+		new FixedBeacon(this, -50 - 22, 2000 - 1000);
+		new FixedBeacon(this, -50 - 22, 50);
+		new FixedBeacon(this, 3000 + 50 + 22, 2000 - 50);
+		new FixedBeacon(this, 3000 + 50 + 22, 2000 - 1000);
+		new FixedBeacon(this, 3000 + 50 + 22, 50);
+		
 		new CompassArea(this);
 
 		// Création des robots
@@ -124,6 +133,48 @@ public class Referee extends AbstractReferee {
 		_cups.add(new Eurobot2020Cup(this, 1.605, 2 - 1.955, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 1.995, 2 - 1.955, Eurobot2020CupType.GREEN));
 
+		for (int i = 0; i < 2; i += 1) {
+			for (int j = 0; j < 5; j += 1) {
+				Eurobot2020CupType color = Eurobot2020CupType.GREEN;
+				if (((i + j) % 2) == 0) {
+					color = Eurobot2020CupType.RED;
+				}
+				_cups.add(new Eurobot2020Cup(this, -0.067 + i * (0.067 * 2 + 3.0), 2 - 1.450 - j * 0.075, color));
+			}
+		}
+
+		int config = new Random().nextInt(3);
+		for (int j = 0; j < 5; j += 1) {
+			Eurobot2020CupType color = Eurobot2020CupType.GREEN;
+			Eurobot2020CupType ncolor = Eurobot2020CupType.GREEN;
+
+			switch (config) {
+			case 0:
+				if ((j == 1) || (j == 4)) {
+					color = Eurobot2020CupType.RED;
+				}
+				break;
+			case 1:
+				if ((j == 2) || (j == 4)) {
+					color = Eurobot2020CupType.RED;
+				}
+				break;
+			case 2:
+				if ((j == 3) || (j == 4)) {
+					color = Eurobot2020CupType.RED;
+				}
+				break;
+			}
+
+			if (color == Eurobot2020CupType.GREEN) {
+				ncolor = Eurobot2020CupType.RED;
+			}
+
+			_cups.add(new Eurobot2020Cup(this, 0.7 + j * 0.075, 2 + 0.067, color));
+			_cups.add(new Eurobot2020Cup(this, 3 - 0.7 - j * 0.075, 2 + 0.067, ncolor));
+
+		}
+
 		// Simulation initial du monde
 		_world.update(FRAME_DURATION_ms / 1000.0, -1, 1000);
 
@@ -145,35 +196,31 @@ public class Referee extends AbstractReferee {
 	@Override
 	public void gameTurn(int turn) {
 		_elapsedTime += FRAME_DURATION_ms;
-		
-	
-		
-				
+
 		// Simulation du monde
 		double delta_t = FRAME_DURATION_ms / 1000.0;
-		while(_world.update(delta_t, -1, 1)) {
+		while (_world.update(delta_t, -1, 1)) {
 			delta_t = 0;
 			for (Player p : gameManager.getPlayers()) {
 				p.compute();
 			}
 		}
-		
-		if(Double.isNaN(gameManager.getPlayer(1).getBodies()[1].getTransform().getTranslationX())) {
+
+		if (Double.isNaN(gameManager.getPlayer(1).getBodies()[1].getTransform().getTranslationX())) {
 			gameManager.endGame();
 		}
 
-		//set compass
-		if(compassRotationEnded() ) {
-			if(_compassIsNorth) {
+		// set compass
+		if (compassRotationEnded()) {
+			if (_compassIsNorth) {
 				_compass.setRotation(0);
-			}
-			else {
+			} else {
 				_compass.setRotation(Math.PI);
 			}
 		} else {
 			_compass.setRotation(_elapsedTime);
 		}
-		
+
 		// Mise a jour positions joueurs
 		for (Player p : gameManager.getPlayers()) {
 			p.compute();
@@ -191,7 +238,7 @@ public class Referee extends AbstractReferee {
 		// Envoi des entrées aux joueurs
 		sendPlayerInputs();
 		readPlayerOutputs();
-		
+
 		// Détection de la fin du match
 		if (_elapsedTime > DUREE_MATCH_s * 1000) {
 			gameManager.endGame();
@@ -220,17 +267,11 @@ public class Referee extends AbstractReferee {
 			try {
 				p.getAction(this);
 			} catch (NumberFormatException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				p.deactivate("Bad response (NumberFormatException)");
+				p.deactivateAndReset(this, "Bad response (NumberFormatException)");
 			} catch (TimeoutException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				p.deactivate("Bad response (TimeoutException)");
+				p.deactivateAndReset(this, "Bad response (TimeoutException)");
 			} catch (ArrayIndexOutOfBoundsException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				p.deactivate("Bad response (ArrayIndexOutOfBoundsException)");
+				p.deactivateAndReset(this, "Bad response (ArrayIndexOutOfBoundsException)");
 			}
 		}
 	}

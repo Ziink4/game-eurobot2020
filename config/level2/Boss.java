@@ -1,7 +1,7 @@
 import java.util.LinkedList;
 import java.util.Scanner;
 
-public class AgentAsserv {
+class Player {
 	public static int ACUTAL_TIME_ms = 0;
 
 	public static class PID {
