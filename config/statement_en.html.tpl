@@ -94,9 +94,10 @@
 		      	<li><var>mechanical_order</var> can be :
 		      		<ul>
 		      		<li><b>IDLE</b>: do nothing</li>
-		      		<li><b>ACTIVATE_FRONT</b>: activate the front actuator</li>		<li><b>ACTIVATE_LEFT</b>: activate the left actuator</li>		<li><b>ACTIVATE_RIGHT</b>: activate the right actuator</li>
+		      		<li><b>ACTIVATE_FRONT</b>: activate the front actuator</li>	
+		      		<li><b>ACTIVATE_LEFT</b>: activate the left actuator</li>
+		     		<li><b>ACTIVATE_RIGHT</b>: activate the right actuator</li>
 		      		<li><b>TAKE</b>: take playing element (actuator must be activated before)</li>
-		      		<li><b>RELEASE</b>: release playing element (actuator must be activated before)</li>
 		      		<li><b>RELEASE</b>: release playing element (actuator must be activated before)</li>
 		      		<li><b>LIGHT</b>: turn the lighthouse on (actuator must be activated before)</li>
 		      		<li><b>WIND</b>: turn the windsock on (actuator must be activated before)</li>

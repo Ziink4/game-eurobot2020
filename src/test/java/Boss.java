@@ -464,8 +464,9 @@ class Boss {
 					}
 					robots[0].getTrajectory().gotoA(90).run();
 				} else if (turn == 5) {
-					robots[1].getTrajectory().gotoD(100).run();
+					robots[1].getTrajectory().gotoD(75).run();
 					robots[1].getTrajectory().gotoA(90).run();
+					robots[1].getTrajectory().gotoD(2000).run();
 				} else if (compass != null && !goto_compass) {
 					goto_compass = true;
 					if (compass.equals("N")) {

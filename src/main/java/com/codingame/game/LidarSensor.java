@@ -13,7 +13,7 @@ import com.codingame.gameengine.module.entities.Curve;
 import com.codingame.gameengine.module.entities.Line;
 
 public class LidarSensor {
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 	
 	private Line[] _debugLines = null;
 	private int _id;
