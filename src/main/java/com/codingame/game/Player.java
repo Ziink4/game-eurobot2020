@@ -8,6 +8,7 @@ import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.dynamics.DetectResult;
 import org.dyn4j.dynamics.RaycastResult;
 import org.dyn4j.dynamics.contact.ContactPoint;
+import org.dyn4j.dynamics.joint.PrismaticJoint;
 import org.dyn4j.geometry.AABB;
 import org.dyn4j.geometry.Convex;
 import org.dyn4j.geometry.MassType;
@@ -64,6 +65,20 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private LinkedList<LinkedList<IRSensor>> _sensors = new LinkedList<LinkedList<IRSensor>>();
 
 	private Sprite[] _flag = { null, null };
+	private Body[] _refbody= { null, null };
+	private double[] _angularVelocity = {0, 0};
+	private double[] _velocity = {0, 0};
+	
+
+	public void updateSetpoints() {
+		int i;
+		for (i = 0; i < 2; i += 1) {
+		_refbody[i].translate(_body[i].getWorldCenter().subtract(_refbody[i].getWorldCenter()));
+		_refbody[i].setAngularVelocity(_angularVelocity[i]);
+		Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(_velocity[i]);
+		_body[i].setLinearVelocity(velocity2D);
+		}
+	}
 
 	int getAction(Referee referee) throws NumberFormatException, TimeoutException, ArrayIndexOutOfBoundsException {
 		// Extract robot 1 and 2 set points
@@ -90,12 +105,10 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 			// assign motor setpoints
 			final double max_speed = (V_MAX / (_width_mm[i] / 2000.0));
-			double angularVelocity = (right_motor - left_motor) / (2 * MAX_MOTOR) * max_speed;
-			double velocity = (right_motor + left_motor) / (2 * MAX_MOTOR) * V_MAX;
+			_angularVelocity[i] = (right_motor - left_motor) / (2 * MAX_MOTOR) * max_speed;
+			_velocity[i] = (right_motor + left_motor) / (2 * MAX_MOTOR) * V_MAX;
 
-			_body[i].setAngularVelocity(angularVelocity);
-			Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(velocity);
-			_body[i].setLinearVelocity(velocity2D);
+			
 
 			// check collision
 			List<ContactPoint> cts = _body[i].getContacts(false);
@@ -111,11 +124,11 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 						Vector2 op_pos = _body[i].getTransform()
 								.getInverseTransformed(b.getTransform().getTranslation());
 						if (op_pos.y >= 0) {
-							if (velocity <= 0) {
+							if (_velocity[i] <= 0) {
 								continue;
 							}
 						} else {
-							if (velocity >= 0) {
+							if (_velocity[i] >= 0) {
 								continue;
 							}
 						}
@@ -402,6 +415,9 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		for (int i = 0; i < 2; i += 1) {
 			// Corps pour le moteur physique
 			_body[i] = new Body();
+			_refbody[i] = new Body();
+			_refbody[i].setUserData(this);
+			_refbody[i].setMass(MassType.FIXED_ANGULAR_VELOCITY);
 
 			Rectangle shape = new Rectangle(_width_mm[i] / 1000.0, _height_mm[i] / 1000.0);
 
@@ -448,26 +464,38 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 			_lidars[i] = new LidarSensor(referee, this, i, lidar_max_distance);
 
+			Vector2 position = new Vector2();
+			double rotation = 0;
 			if (getIndex() == 0) {
-				_body[i].rotate(-Math.PI / 2);
+				rotation = - Math.PI / 2;
 				if (i == 0) {
-					_body[i].translate(0.4 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
+					position.add(0.4 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
 				} else {
-					_body[i].translate(0.0 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
+					position.add(0.0 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
 				}
 
 			} else {
-				_body[i].rotate(Math.PI / 2);
+				rotation = Math.PI / 2;
 				if (i == 0) {
-					_body[i].translate(3.0 - 0.4 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
+					position.add(3.0 - 0.4 + _height_mm[i] / 2000.0 + 0.03, 2.0 - (0.5 + 1.1) / 2);
 				} else {
-					_body[i].translate(3.0 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
+					position.add(3.0 - _height_mm[i] / 2000.0 - 0.03, 2.0 - (0.5 + 1.1) / 2);
 				}
 
 			}
 
+			_body[i].rotate(rotation);
+			_body[i].translate(position);
+			_refbody[i].rotate(rotation);	
+			_refbody[i].translate(position);
+		
+			
 			referee.getWorld().addBody(_body[i]);
-
+			referee.getWorld().addBody(_refbody[i]);
+			
+			PrismaticJoint pj = new PrismaticJoint(_refbody[i], _body[i], position, new Vector2(0, 1).rotate(rotation));
+			referee.getWorld().addJoint(pj);
+			
 			// Dessin sur l'interface
 			com.codingame.gameengine.module.entities.Rectangle rectangle = referee.getGraphicEntityModule()
 					.createRectangle();
@@ -1036,4 +1064,5 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 		return false;
 	}
+
 }

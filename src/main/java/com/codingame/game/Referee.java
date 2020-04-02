@@ -199,9 +199,13 @@ public class Referee extends AbstractReferee {
 
 		// Simulation du monde
 		double delta_t = FRAME_DURATION_ms / 1000.0;
+		for (Player p : gameManager.getPlayers()) {
+			p.updateSetpoints();
+		}
 		while (_world.update(delta_t, -1, 1)) {
 			delta_t = 0;
 			for (Player p : gameManager.getPlayers()) {
+				p.updateSetpoints();
 				p.compute();
 			}
 		}

@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 public class AgentAsserv {
 	public static int ACUTAL_TIME_ms = 0;
-	public static boolean chore = true;
+	public static boolean chore = false;
 
 	public static class PID {
 
