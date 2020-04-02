@@ -5,7 +5,7 @@ public class Main {
 
         MultiplayerGameRunner gameRunner = new MultiplayerGameRunner();
         
-        gameRunner.addAgent(Boss.class);
+        gameRunner.addAgent(AgentAsserv.class);
         gameRunner.addAgent(AgentAsserv.class);
        
         

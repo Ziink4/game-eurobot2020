@@ -90,7 +90,7 @@
 		    <span class="statement-lineno">Line 2:</span> <var>left_motor</var> <var>right_motor</var> <var>mechanical_order</var> for robot 2<br>
 		    <span class="statement-lineno">Line 3:</span> <var>estimated_points</var><br>
 		    <ul>
-		      	<li><var>left_motor</var> and <var>right_motor</var> must be signed integer from -100 to 100</li>
+		      	<li><var>left_motor</var> and <var>right_motor</var> must be signed integer from -1000 to 1000</li>
 		      	<li><var>mechanical_order</var> can be :
 		      		<ul>
 		      		<li><b>IDLE</b>: do nothing</li>

@@ -31,6 +31,8 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private static final int MAX_CUP_PER_ROBOT = 4;
 	private static final int SIDE_GRABBER_L_mm = 85;
 	private static final int SIDE_GRABBER_W_mm = 25;
+	private static final double MAX_MOTOR = 1000.0;
+	private static final double V_MAX = 2;
 
 	private Body[] _body = { null, null };
 	private Group[] _shape = { null, null };
@@ -73,22 +75,23 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			String order = line1[2];
 
 			// clamp motors set point
-			if (left_motor > 100) {
-				left_motor = 100;
+			if (left_motor > MAX_MOTOR) {
+				left_motor = MAX_MOTOR;
 			}
-			if (left_motor < -100) {
-				left_motor = -100;
+			if (left_motor < -MAX_MOTOR) {
+				left_motor = -MAX_MOTOR;
 			}
-			if (right_motor > 100) {
-				right_motor = 100;
+			if (right_motor > MAX_MOTOR) {
+				right_motor = MAX_MOTOR;
 			}
-			if (right_motor < -100) {
-				right_motor = -100;
+			if (right_motor < -MAX_MOTOR) {
+				right_motor = -MAX_MOTOR;
 			}
 
 			// assign motor setpoints
-			double angularVelocity = (right_motor - left_motor) / 100.0 * 1;
-			double velocity = (right_motor + left_motor) / 100.0 * 1;
+			final double max_speed = (V_MAX / (_width_mm[i] / 2000.0));
+			double angularVelocity = (right_motor - left_motor) / (2 * MAX_MOTOR) * max_speed;
+			double velocity = (right_motor + left_motor) / (2 * MAX_MOTOR) * V_MAX;
 
 			_body[i].setAngularVelocity(angularVelocity);
 			Vector2 velocity2D = _body[i].getTransform().getRotation().rotate90().toVector(velocity);
