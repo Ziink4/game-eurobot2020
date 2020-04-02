@@ -47,7 +47,7 @@ class Player {
 	}
 
 	public static enum MecaState {
-		IDLE, ACTIVATE_FRONT, TAKE, LIGHT, FLAG,
+		IDLE, ACTIVATE_FRONT, TAKE, LIGHT, FLAG, WIND, ACTIVATE_RIGHT, ACTIVATE_LEFT, RELEASE
 	}
 
 	public static class Trajectory {
@@ -335,6 +335,10 @@ class Player {
 		public TrajectoryOrder meca(MecaState state) {
 			return new TrajectoryOrderMeca(this).setState(state);
 		}
+
+		public boolean isDone() {
+			return _orders.size() == 0;
+		}
 	}
 
 	public static class Robot {
@@ -349,8 +353,8 @@ class Player {
 		private double _distance;
 		private int _left_motor;
 		private int _right_motor;
-		private PID _pid_dist = new PID(0.1, 0.1, 0, 50);
-		private PID _pid_angu = new PID(3, 0, 0, 0);
+		private PID _pid_dist = new PID(1, 1, 0.0, 50);
+		private PID _pid_angu = new PID(2, 0, 0, 0);
 		private Trajectory _trajectory;
 		private MecaState _meca = MecaState.IDLE;
 
@@ -419,11 +423,11 @@ class Player {
 			double right_motor = _pid_dist.getOutput() + _pid_angu.getOutput();
 
 			double scale = 1.0;
-			if (Math.abs(left_motor) / 100.0 > scale) {
-				scale = Math.abs(left_motor) / 100.0;
+			if (Math.abs(left_motor) / 1000.0 > scale) {
+				scale = Math.abs(left_motor) / 1000.0;
 			}
-			if (Math.abs(right_motor) / 100.0 > scale) {
-				scale = Math.abs(right_motor) / 100.0;
+			if (Math.abs(right_motor) / 1000.0 > scale) {
+				scale = Math.abs(right_motor) / 1000.0;
 			}
 
 			_left_motor = (int) (left_motor / scale);
@@ -501,8 +505,147 @@ class Player {
 					}
 				}
 
-				if (turn == 0) {					
-					robots[0].getTrajectory().gotoD(500).run();
+				if (turn == 0) {
+					/*
+					if (playerColor.equals("BLUE")) {
+						robots[0].getTrajectory().gotoD(1500 - robots[0].getX()).run();
+					} else {
+						robots[0].getTrajectory().gotoD(robots[0].getX() - 1500).run();
+					}*/
+					robots[0].getTrajectory().gotoD(350).run();
+					robots[0].getTrajectory().gotoA(-90).run();
+					robots[0].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[0].getTrajectory().gotoD(1200).setMaxTime(5000).run();
+					robots[0].getTrajectory().meca(MecaState.WIND).run();
+					robots[0].getTrajectory().gotoD(-1000).run();
+					if (playerColor.equals("BLUE")) {
+						robots[0].getTrajectory().gotoA(45).run();
+					}
+					else  {
+						robots[0].getTrajectory().gotoA(135).run();
+					}
+				} else if (turn == 3) {
+					robots[1].getTrajectory().gotoD(30).run();
+					robots[1].getTrajectory().gotoA(90).run();
+					if (playerColor.equals("BLUE")) {
+						robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+					}
+					else  {
+						robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+					}
+					robots[1].getTrajectory().gotoD(-935).run();
+					robots[1].getTrajectory().meca(MecaState.TAKE).run();
+					for(int i = 0; i < 4; i += 1) {						
+						robots[1].getTrajectory().gotoD(75).run();
+						if (playerColor.equals("BLUE")) {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						}
+						else  {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						}
+						robots[1].getTrajectory().meca(MecaState.TAKE).run();
+						if (playerColor.equals("BLUE")) {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						}
+						else  {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						}
+						robots[1].getTrajectory().meca(MecaState.TAKE).run();
+					}										
+					robots[1].getTrajectory().gotoD(580).run();
+					if (playerColor.equals("BLUE")) {
+						robots[1].getTrajectory().gotoA(0).run();
+					} else {
+						robots[1].getTrajectory().gotoA(180).run();
+					}
+					robots[1].getTrajectory().gotoD(70).run();
+					robots[1].getTrajectory().gotoA(90).run();
+					for(int i = 0; i < 4; i += 1) {		
+						robots[1].getTrajectory().gotoD(10).run();
+						if (playerColor.equals("BLUE")) {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						}
+						else  {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						}
+						robots[1].getTrajectory().meca(MecaState.RELEASE).run();						
+					}
+					robots[1].getTrajectory().gotoD(500).run();
+					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[1].getTrajectory().meca(MecaState.TAKE).run();					
+					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[1].getTrajectory().meca(MecaState.TAKE).run();					
+					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[1].getTrajectory().gotoD(400).setMaxTime(2500).run();
+					robots[1].getTrajectory().meca(MecaState.LIGHT).run();
+					robots[1].getTrajectory().gotoD(-700).run();
+				} else if (compass != null && !goto_compass && robots[1].getTrajectory().isDone()) {
+				
+					goto_compass = true;
+					if (compass.equals("N")) {
+						if (playerColor.equals("BLUE")) {
+							robots[0].getTrajectory().gotoA(180).run();
+							robots[0].getTrajectory().gotoD(350).run();
+							robots[0].getTrajectory().gotoA(90).run();
+							robots[0].getTrajectory().gotoD(400).run();
+							robots[1].getTrajectory().gotoD(500).run();
+						} else {
+							robots[0].getTrajectory().gotoA(0).run();
+							robots[0].getTrajectory().gotoD(350).run();
+							robots[0].getTrajectory().gotoA(90).run();
+							robots[0].getTrajectory().gotoD(400).run();
+							robots[1].getTrajectory().gotoD(500).run();
+						}
+					} else {
+						if (playerColor.equals("BLUE")) {
+							robots[0].getTrajectory().gotoA(180).run();
+							robots[0].getTrajectory().gotoD(350).run();
+							robots[0].getTrajectory().gotoA(-90).run();
+							robots[0].getTrajectory().gotoD(200).run();
+							robots[1].getTrajectory().gotoD(-500).run();
+						} else {
+							robots[0].getTrajectory().gotoA(0).run();
+							robots[0].getTrajectory().gotoD(350).run();
+							robots[0].getTrajectory().gotoA(-90).run();
+							robots[0].getTrajectory().gotoD(200).run();
+							robots[1].getTrajectory().gotoD(-500).run();
+						}
+					}
+
+					score += 10;
+				} else if(ACUTAL_TIME_ms > 96000 && !flag) {
+					boolean take_right = false;
+					if (compass.equals("N")) { 
+						if (playerColor.equals("BLUE")) {
+							take_right = true;
+						}
+					}
+					else { 
+						if (!playerColor.equals("BLUE")) {
+							take_right = true;
+						}
+					}
+					
+					if (take_right) {
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						robots[0].getTrajectory().meca(MecaState.TAKE).run();
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						robots[0].getTrajectory().meca(MecaState.RELEASE).run();
+					} else {
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						robots[0].getTrajectory().meca(MecaState.TAKE).run();
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						robots[0].getTrajectory().meca(MecaState.RELEASE).run();
+					}
+					
+					//robots[0].getTrajectory().meca(MecaState.FLAG).run();
+					robots[1].setMeca(MecaState.FLAG);
+					flag = true;
+					score += 10; //flag
+					score += 13; //light
+					score += 5; //winsocks
+					score += 2; //cup
+					score += 4; //cup
 				}
 
 				for (int i = 0; i < 2; i++) {
