@@ -1,6 +1,8 @@
 import java.util.LinkedList;
 import java.util.Scanner;
 
+import AgentAsserv.PID;
+
 class Player {
 	public static int ACUTAL_TIME_ms = 0;
 
@@ -353,8 +355,8 @@ class Player {
 		private double _distance;
 		private int _left_motor;
 		private int _right_motor;
-		private PID _pid_dist = new PID(0.1, 0.1, 0, 50);
-		private PID _pid_angu = new PID(3, 0, 0, 0);
+		private PID _pid_dist = new PID(1, 1, 0.0, 50);
+		private PID _pid_angu = new PID(2, 0, 0, 0);
 		private Trajectory _trajectory;
 		private MecaState _meca = MecaState.IDLE;
 
@@ -423,11 +425,11 @@ class Player {
 			double right_motor = _pid_dist.getOutput() + _pid_angu.getOutput();
 
 			double scale = 1.0;
-			if (Math.abs(left_motor) / 100.0 > scale) {
-				scale = Math.abs(left_motor) / 100.0;
+			if (Math.abs(left_motor) / 1000.0 > scale) {
+				scale = Math.abs(left_motor) / 1000.0;
 			}
-			if (Math.abs(right_motor) / 100.0 > scale) {
-				scale = Math.abs(right_motor) / 100.0;
+			if (Math.abs(right_motor) / 1000.0 > scale) {
+				scale = Math.abs(right_motor) / 1000.0;
 			}
 
 			_left_motor = (int) (left_motor / scale);
