@@ -57,6 +57,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 	private LinkedList<Eurobot2020Cup>[] _cupTaken = null;
 	private int[] _lastPenalty = { -50000, -50000 };
 	private Text _penaltiesArea;
+	private Text _bonusArea;
 	private LidarSensor[] _lidars = { null, null };
 	private int _penalties;
 	private LightHouse _lighthouse = null;
@@ -557,6 +558,8 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				.setStrokeColor(0xFFFFFF).setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(350);
 		_penaltiesArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF).setStrokeColor(0xFFFFFF)
 				.setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(400);
+		_bonusArea = referee.getGraphicEntityModule().createText("").setFillColor(0xFFFFFF).setStrokeColor(0xFFFFFF)
+				.setFontSize(32).setX(10 + getIndex() * OFFSET_W).setY(450);
 		_scoreArea = referee.getGraphicEntityModule().createText("000").setFillColor(color).setStrokeColor(0xFFFFFF)
 				.setFontSize(128).setFontWeight(FontWeight.BOLDER).setX(35).setY(35);
 
@@ -680,10 +683,13 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 
 	private void computeScore(Referee referee) {
 		int score = 0;
+		int bonus1 = 0;
+		int bonus2 = 0;
 		int classical_score = 2; // for the light house
 
 		if (_isOutOfStartingArea && !_fail) {
-			score = 5;
+			bonus1 = 5;
+			score = bonus1;
 
 			AABB p1;
 			AABB p2;
@@ -898,11 +904,11 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				classical_score += 5;
 			}
 
-			int bonus = (int) (Math.ceil(0.3 * classical_score) - Math.abs(_estimatedScore - classical_score));
-			if (bonus < 0) {
-				bonus = 0;
+			bonus2 = (int) (Math.ceil(0.3 * classical_score) - Math.abs(_estimatedScore - classical_score));
+			if (bonus2 < 0) {
+				bonus2 = 0;
 			}
-			score += bonus;
+			score += bonus2;
 
 			score += classical_score;
 			score -= _penalties;
@@ -915,8 +921,9 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 		_regularScoreArea.setText(String.format("Regular points: %d", classical_score));
 		_estimatedScoreArea.setText(String.format("Est. points: %d", _estimatedScore));
 		_penaltiesArea.setText(String.format("Penalties: %d", -_penalties));
-		_scoreArea.setText(String.format("%03d", getScore()));
+		_bonusArea.setText(String.format("Bonus: %d + %d", bonus1, bonus2));
 		setScore(score);
+		_scoreArea.setText(String.format("%03d", score));
 	}
 
 	public void compute() {

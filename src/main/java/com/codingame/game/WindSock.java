@@ -75,7 +75,8 @@ public class WindSock implements ZObject {
 
 	@Override
 	public boolean isVisibleBySensor(BodyFixture fixture, SensorType type) {
-		return isActivated() && (type != SensorType.VERY_HIGH);
+		return true;
+		//return isActivated() && (type != SensorType.VERY_HIGH);
 	}
 
 }
