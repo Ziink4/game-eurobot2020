@@ -5,6 +5,8 @@ class AgentAsserv {
 	public static int ACUTAL_TIME_ms = 0;
 	private static boolean _sockDone;
 	private static boolean _lightHouse;
+	private static boolean _addLastRed;
+	private static boolean _park;
 
 	public static class PID {
 
@@ -52,13 +54,13 @@ class AgentAsserv {
 		IDLE, ACTIVATE_FRONT, TAKE, LIGHT, FLAG, WIND, ACTIVATE_RIGHT, ACTIVATE_LEFT, RELEASE;
 
 		MecaState inverse(int playerI) {
-			switch(this) {
+			switch (this) {
 			case ACTIVATE_RIGHT:
 				return playerI == 1 ? this : ACTIVATE_LEFT;
 			case ACTIVATE_LEFT:
 				return playerI == 1 ? this : ACTIVATE_RIGHT;
-				default:
-					return this;
+			default:
+				return this;
 			}
 		}
 	}
@@ -134,7 +136,7 @@ class AgentAsserv {
 				_maxtime = max;
 				return this;
 			}
-			
+
 			public double getStartX() {
 				return _start_x;
 			}
@@ -147,7 +149,7 @@ class AgentAsserv {
 		public static final double TRAJECTORY_D_STOP_MM = 3.0;
 		public static final double TRAJECTORY_XY_STOP_ANGLE_DEG = 5.0;
 		public static final double TRAJECTORY_XY_STOP_MM = 3.0;
-		
+
 		public static class TrajectoryOrderGotoXY extends TrajectoryOrder {
 
 			private double _x;
@@ -170,6 +172,12 @@ class AgentAsserv {
 
 			@Override
 			public TrajectoryStatus compute() {
+				if(Double.isNaN(_x)) {
+					_x = getStartX();
+				}
+				if(Double.isNaN(_y)) {
+					_y = getStartY();
+				}
 				double x = getTrajectory().getRobot().getX();
 				double y = getTrajectory().getRobot().getY();
 
@@ -213,11 +221,11 @@ class AgentAsserv {
 				return TrajectoryStatus.ORDER_IN_PROGRESS;
 			}
 		}
-		
+
 		public static class TrajectoryOrderScore extends TrajectoryOrder {
 
 			private int _value;
-			
+
 			public TrajectoryOrderScore(Trajectory trajectory) {
 				super(trajectory);
 			}
@@ -228,7 +236,7 @@ class AgentAsserv {
 			}
 
 			@Override
-			public TrajectoryStatus compute() {		
+			public TrajectoryStatus compute() {
 				getTrajectory().getRobot().addScore(_value);
 				return TrajectoryStatus.ORDER_NEXT;
 			}
@@ -292,11 +300,10 @@ class AgentAsserv {
 
 			@Override
 			public TrajectoryStatus compute() {
-				if(!getTrajectory().getRobot().mecaSet()) {
+				if (!getTrajectory().getRobot().mecaSet()) {
 					getTrajectory().getRobot().setMeca(_state);
 					return TrajectoryStatus.ORDER_NEXT;
-				}
-				else {
+				} else {
 					return TrajectoryStatus.ORDER_IN_PROGRESS;
 				}
 			}
@@ -393,11 +400,9 @@ class AgentAsserv {
 				_estimations_need_recompute = false;
 			}
 
-			
-
 			while (true) {
 				TrajectoryOrder order = _orders.peekFirst();
-				if(order == null) {
+				if (order == null) {
 					if (_result == TrajectoryStatus.RUNNING) {
 						_result = TrajectoryStatus.SUCCESS;
 					}
@@ -407,7 +412,8 @@ class AgentAsserv {
 				// check if order is new
 				if (!order.isInitialized()) {
 					// set real start values
-					order.initialize(current_time_ms, _robot.getDistance(), _robot.getAngle(), _robot.getX(), _robot.getY());
+					order.initialize(current_time_ms, _robot.getDistance(), _robot.getAngle(), _robot.getX(),
+							_robot.getY());
 				}
 				TrajectoryStatus status = order.compute();
 
@@ -425,14 +431,12 @@ class AgentAsserv {
 				if (status == TrajectoryStatus.ORDER_DONE) {
 					_orders.pollFirst();
 					break;
-				}
-				else if (status == TrajectoryStatus.ORDER_NEXT) {
+				} else if (status == TrajectoryStatus.ORDER_NEXT) {
 					_orders.pollFirst();
-				}
-				else {
+				} else {
 					break;
 				}
-			} 
+			}
 
 		}
 
@@ -465,11 +469,11 @@ class AgentAsserv {
 		public boolean isDone() {
 			return _orders.size() == 0;
 		}
-		
+
 		public TrajectoryOrderGotoXY gotoXY(double x, double y) {
 			return new TrajectoryOrderGotoXY(this).setX(x).setY(y);
 		}
-		
+
 		public TrajectoryOrderScore addScore(int value) {
 			return new TrajectoryOrderScore(this).setValue(value);
 		}
@@ -494,6 +498,7 @@ class AgentAsserv {
 		private boolean _mecaSet = false;
 		private int[] _score;
 		private boolean _flag = false;
+		public boolean _park;
 
 		public Robot(int[] score) {
 			_trajectory = new Trajectory(this);
@@ -565,8 +570,8 @@ class AgentAsserv {
 			_trajectory.compute(current_time_ms);
 			_pid_dist.compute(_distance);
 			_pid_angu.compute(_angle);
-			
-			if(!_mecaSet && !_flag && current_time_ms > 95000) {
+
+			if (!_mecaSet && !_flag && current_time_ms > 95000) {
 				_flag = true;
 				setMeca(MecaState.FLAG);
 				addScore(5);
@@ -613,7 +618,7 @@ class AgentAsserv {
 	public static void main(String[] args) {
 		try (Scanner in = new Scanner(System.in)) {
 			int turn = 0;
-			int[] score = { 2 }; 
+			int[] score = { 2 };
 
 			Robot[] robots = { null, null };
 
@@ -621,7 +626,7 @@ class AgentAsserv {
 			String compass = null;
 			String playerColor = in.next();
 			int playerI = 1;
-			if(!playerColor.equals("BLUE")) {
+			if (!playerColor.equals("BLUE")) {
 				playerI = -1;
 			}
 			for (int i = 0; i < 2; i++) {
@@ -644,7 +649,7 @@ class AgentAsserv {
 					if (!detectedCompass.equals("?") && ACUTAL_TIME_ms > 26000) {
 						compass = detectedCompass;
 					}
-					System.err.println(detectedCompass);
+
 				}
 
 				for (int i = 0; i < 2; i++) {
@@ -666,33 +671,60 @@ class AgentAsserv {
 				if (turn == 0) {
 					robots[0].getTrajectory().gotoD(500).run();
 					try2ndPort(robots[0], playerI);
-				}
-				else if (turn == 1) {
+				} else if (turn == 1) {
 					robots[1].getTrajectory().gotoD(200).run();
-				}
-				else {
-					if(robots[0].getTrajectory().isDone()) {
-						if(!_sockDone) {
-							tryWinsock(robots[0], playerI);
+				} else {
+					if (ACUTAL_TIME_ms >= 85000) {
+						if(!_park) {
+							tryPark(robots[0], robots[1], playerI, compass.equals("N") ? 1 : - 1);
+						}
+					} else {
+						if (robots[0].getTrajectory().isDone()) {
+							if (!_sockDone) {
+								tryWinsock(robots[0], playerI);
+							} else if (!_addLastRed) {
+								tryAddLastRed(robots[0], playerI);
+							}
+						}
+
+						if (robots[1].getTrajectory().isDone()) {
+							if (!_lightHouse) {
+								tryLightHouse(robots[1], playerI);
+							}
+
 						}
 					}
-					
-					if(robots[1].getTrajectory().isDone()) {
-						if(!_lightHouse) {
-							tryLightHouse(robots[1], playerI);
-						}
-					}
+
 				}
 
 				for (int i = 0; i < 2; i++) {
 					System.out.println(robots[i].getOutputs(ACUTAL_TIME_ms));
 					System.err.println(robots[i].debugPosition());
+					System.err.println(compass);
 				}
 				System.out.println(score[0]);
 				turn += 1;
 				ACUTAL_TIME_ms += 350;
 			}
 		}
+	}
+	
+	private static void tryPark(Robot r1, Robot r2, int playerI, int direction) {
+		r2.getTrajectory().gotoXY(1500 - playerI * (1500 - 500), 2000 - 800).run();
+		r2.getTrajectory().gotoA(90).run();
+		r2.getTrajectory().gotoXY(Double.NaN, 2000 - 800 + direction * 550).run();
+		r2.getTrajectory().gotoA(90 - playerI * 90).run();
+		r2.getTrajectory().gotoD(-350).run();
+		r2.getTrajectory().addScore(5).run();
+		
+		r1.getTrajectory().gotoXY(1500 - playerI * (1500 - 950), 2000 - 800).run();
+		r1.getTrajectory().gotoA(90).run();
+		r1.getTrajectory().gotoXY(Double.NaN, 2000 - 800 + direction * 450).run();
+		r1.getTrajectory().gotoA(90 - playerI * 90).run();
+		r1.getTrajectory().gotoD(-600).run();
+		r1.getTrajectory().addScore(5).run();
+		
+		_park = true;
 	}
 
 	private static void tryLightHouse(Robot robot, int playerI) {
@@ -706,9 +738,25 @@ class AgentAsserv {
 		robot.getTrajectory().addScore(13).run();
 		_lightHouse = true;
 	}
-	
+
+	private static void tryAddLastRed(Robot robot, int playerI) {
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 150), 2000 - 1750).run();
+		robot.getTrajectory().gotoA(90).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().gotoXY(1500 + playerI * 250, 450).run();
+		robot.getTrajectory().gotoA(90 - playerI * 90).run();
+		robot.getTrajectory().gotoD(100).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(4).run();
+		robot.getTrajectory().gotoD(-300).run();
+		robot.getTrajectory().gotoA(90).run();
+		_addLastRed = true;
+	}
+
 	private static void tryWinsock(Robot robot, int playerI) {
-		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 635), 500).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 635), 470).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
 		robot.getTrajectory().gotoA(-90).run();
 		robot.getTrajectory().gotoD(350).run();
@@ -767,13 +815,13 @@ class AgentAsserv {
 		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
 		robot.getTrajectory().gotoD(-30).run();
 		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
 		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(-50).run(); 
+		robot.getTrajectory().gotoD(-50).run();
 		robot.getTrajectory().gotoA(-90 - playerI * 20).run();
 		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
 		robot.getTrajectory().addScore(20).run();
-		robot.getTrajectory().gotoD(-100).run(); 
+		robot.getTrajectory().gotoD(-100).run();
 	}
 }

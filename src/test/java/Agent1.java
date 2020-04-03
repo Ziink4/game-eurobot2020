@@ -1,55 +1,159 @@
 import java.util.Scanner;
 
+
 public class Agent1 {
 	public static void main(String[] args) {
+		
+		String replay = 
+				"Sortie standard :\n" + 
+				"674 490 IDLE\n" + 
+				"-280 280 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"490 674 IDLE\n" + 
+				"280 -280 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"404 -107 IDLE\n" + 
+				"0 0 ACTIVATE_FRONT\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"-107 404 IDLE\n" + 
+				"0 0 ACTIVATE_FRONT\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 ACTIVATE_LEFT\n" + 
+				"1029 1029 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 ACTIVATE_RIGHT\n" + 
+				"1029 1028 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"-52 52 IDLE\n" + 
+				"0 0 LIGHT\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"52 -52 IDLE\n" + 
+				"0 0 LIGHT\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"1246 1247 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"1247 1246 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"246 248 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"248 246 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"266 -266 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"-266 266 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 WIND\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 WIND\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 ACTIVATE_LEFT\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 ACTIVATE_RIGHT\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"581 588 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"588 581 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 WIND\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 WIND\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"383 -383 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"-383 383 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50\n" + 
+				"Sortie standard :\n" + 
+				"0 0 IDLE\n" + 
+				"0 0 IDLE\n" + 
+				"50";
+		
+		String[] rep = replay.split("\n");
+		
 		try (Scanner in = new Scanner(System.in)) {
-			int turn = 0;
-			int score = 0;
-			
-			String color = in.next();
-			in.nextLine();
+			String playerColor = in.next();
 			for (int i = 0; i < 2; i++) {
-				System.err.println(in.nextLine());
+				int x = in.nextInt();
+				int y = in.nextInt();
+				int angle = in.nextInt();
+			}
+			int r = 0;
+			
+			if(playerColor.equals("YELLOW")) {
+				r += 4;
 			}
 
 			// game loop
 			while (true) {
 				for (int i = 0; i < 2; i++) {
-					System.err.println(in.nextLine());
-				}
-				for (int i = 0; i < 2; i++) {
-					System.err.println(in.nextLine());
-				}
-				for (int i = 0; i < 2; i++) {
-					System.err.println(in.nextLine());
+					int leftEncoder = in.nextInt();
+					int rightEncoder = in.nextInt();
+					String lastTakenColor = in.next();
+					String detectedCompass = in.next();
 				}
 
-				if (turn < 5) {
-					System.out.println("20 20 ACTIVATE_FRONT");
-				} else if (turn < 6) {
-					System.out.println("0 0 TAKE");
-				} else if (turn < 11) {
-					System.out.println("-20 -20 IDLE");
-				} else if (turn < 21 && color.equals("BLUE")) {
-					System.out.println("30 -30 ACTIVATE_FRONT");
-				}else if (turn < 21) {
-					System.out.println("-30 30 ACTIVATE_FRONT");
-				} else if (turn < 25) {
-					System.out.println("0 0 RELEASE");
-				} else if (turn < 26) {
-					System.out.println("0 0 IDLE");
-					score += 1;
-				} else if (turn < 28) {
-					System.out.println("10 10 IDLE");
-				} else if (turn < 29) {
-					System.out.println("0 0 IDLE");
-					score += 1;
-				} else {
-					System.out.println("0 0 IDLE");
+				for (int i = 0; i < 2; i++) {
+					int frontLowSensor = in.nextInt();
+					int rightLowSensor = in.nextInt();
+					int backLowSensor = in.nextInt();
+					int leftLowSensor = in.nextInt();
+					int frontLeftHighSensor = in.nextInt();
+					int frontRightHighSensor = in.nextInt();
+					int backRightHighSensor = in.nextInt();
+					int backLeftHighSensor = in.nextInt();
 				}
-				System.out.println("0 0 IDLE");
-				System.out.println(score);
-				turn += 1;
+				for (int i = 0; i < 2; i++) {
+					for (int j = 0; j < 360; j++) {
+						int lidarData = in.nextInt();
+					}
+				}
+				
+				for(int i = 0; i < 3; i += 1) {
+					System.out.println(rep[r + i + 1]);
+				}
+				r += 8;
 			}
 		}
 	}

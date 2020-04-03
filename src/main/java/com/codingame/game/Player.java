@@ -274,6 +274,7 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				if (shape != null) {
 					LinkedList<DetectResult> results = new LinkedList<DetectResult>();
 					referee.getWorld().detect(shape, results);
+					
 					for (DetectResult r : results) {
 						if (r.getBody().getUserData() instanceof WindSock) {
 							((WindSock) r.getBody().getUserData()).activate();
@@ -319,13 +320,14 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 			shape = new org.dyn4j.geometry.Rectangle(_width_mm[robot] / 2000.0 + (SIDE_GRABBER_L_mm / 1000.0), SIDE_GRABBER_W_mm / 1000.0);
 			shape.rotate(_body[robot].getTransform().getRotationAngle());
 			shape.translate(
-					_body[robot].getTransform().getTransformed(new Vector2(-_width_mm[robot] / 4000.0 - (SIDE_GRABBER_L_mm / 1000.0), 0)));
+					_body[robot].getWorldPoint(new Vector2(-_width_mm[robot] / 4000.0 - (SIDE_GRABBER_L_mm / 1000.0), 0)));
 			break;
 
 		case ACTIVATE_RIGHT:
 			shape = new org.dyn4j.geometry.Rectangle(_width_mm[robot] / 2000.0 + (SIDE_GRABBER_L_mm / 1000.0), SIDE_GRABBER_W_mm / 1000.0);
+			shape.rotate(_body[robot].getTransform().getRotationAngle());
 			shape.translate(
-					_body[robot].getTransform().getTransformed(new Vector2(_width_mm[robot] / 4000.0 + (SIDE_GRABBER_L_mm / 1000.0), 0)));
+					_body[robot].getWorldPoint(new Vector2(_width_mm[robot] / 4000.0 + (SIDE_GRABBER_L_mm / 1000.0), 0)));
 			break;
 
 		default:

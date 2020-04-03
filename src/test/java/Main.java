@@ -4,10 +4,9 @@ public class Main {
     public static void main(String[] args) {
 
         MultiplayerGameRunner gameRunner = new MultiplayerGameRunner();
-        
-        gameRunner.addAgent(Boss.class);
+        gameRunner.addAgent(Agent1.class);
         gameRunner.addAgent(AgentAsserv.class);
-        
+ 
         
        
         
