@@ -121,9 +121,85 @@ class AgentAsserv {
 				_maxtime = max;
 				return this;
 			}
+			
+			public double getStartX() {
+				return _start_x;
+			}
+
+			public double getStartY() {
+				return _start_y;
+			}
 		}
 
 		public static final double TRAJECTORY_D_STOP_MM = 3.0;
+		public static final double TRAJECTORY_XY_STOP_ANGLE_DEG = 5.0;
+		public static final double TRAJECTORY_XY_STOP_MM = 3.0;
+		
+		public static class TrajectoryOrderGotoXY extends TrajectoryOrder {
+
+			private double _x;
+			private double _y;
+			private double _d_stop = Double.NaN;
+
+			public TrajectoryOrderGotoXY(Trajectory trajectory) {
+				super(trajectory);
+			}
+
+			public TrajectoryOrderGotoXY setX(double x) {
+				_x = x;
+				return this;
+			}
+
+			public TrajectoryOrderGotoXY setY(double y) {
+				_y = y;
+				return this;
+			}
+
+			@Override
+			public TrajectoryStatus compute() {
+				double x = getTrajectory().getRobot().getX();
+				double y = getTrajectory().getRobot().getY();
+
+				double tx = _x - getStartX();
+				double ty = _y - getStartY();
+				double td = tx * tx + ty * ty;
+
+				double cx = x - getStartX();
+				double cy = y - getStartY();
+				double cd = cx * cx + cy * cy;
+
+				if (getTrajectory().getRobot().isOpponentDetectionEnabled()) {
+					getTrajectory().getRobot().enableOpponentDetection(OpponentDetectionMode.FRONT);
+				}
+
+				if (Math.sqrt(cd) > Math.sqrt(td) - TRAJECTORY_XY_STOP_MM) {
+					return TrajectoryStatus.ORDER_DONE;
+				} else {
+					double dx = _x - x;
+					double dy = _y - y;
+					double dd = dx * dx + dy * dy;
+
+					double cur_angle = getTrajectory().getRobot().getAngle();
+					double abs_target = Math.atan2(dy, dx) * 180.0f / Math.PI;
+
+					double target = TrajectoryOrderGotoA.find_best_angle(cur_angle, abs_target);
+					if (Math.abs(cur_angle - target) < TRAJECTORY_XY_STOP_ANGLE_DEG) {
+						_d_stop = Double.NaN;
+						getTrajectory().getRobot().setAsservDistanceSetpoint(getTrajectory().getRobot().getDistance()
+								+ Math.sqrt(dd) + getEstimatedDistanceBeforeStop());
+					} else {
+						if (Double.isNaN(_d_stop)) {
+							_d_stop = getTrajectory().getRobot().getDistance();
+						}
+						getTrajectory().getRobot().setAsservDistanceSetpoint(_d_stop);
+					}
+
+					getTrajectory().getRobot().setAsservAngularSetpoint(target);
+				}
+
+				return TrajectoryStatus.ORDER_IN_PROGRESS;
+			}
+		}
 
 		public static class TrajectoryOrderGotoD extends TrajectoryOrder {
 
@@ -339,6 +415,10 @@ class AgentAsserv {
 		public boolean isDone() {
 			return _orders.size() == 0;
 		}
+		
+		public TrajectoryOrderGotoXY gotoXY(double x, double y) {
+			return new TrajectoryOrderGotoXY(this).setX(x).setY(y);
+		}
 	}
 
 	public static class Robot {
@@ -466,6 +546,10 @@ class AgentAsserv {
 			boolean goto_compass = false;
 			String compass = null;
 			String playerColor = in.next();
+			int playerI = 1;
+			if(!playerColor.equals("BLUE")) {
+				playerI = -1;
+			}
 			for (int i = 0; i < 2; i++) {
 				int x = in.nextInt();
 				int y = in.nextInt();
@@ -506,146 +590,8 @@ class AgentAsserv {
 				}
 
 				if (turn == 0) {
-					/*
-					if (playerColor.equals("BLUE")) {
-						robots[0].getTrajectory().gotoD(1500 - robots[0].getX()).run();
-					} else {
-						robots[0].getTrajectory().gotoD(robots[0].getX() - 1500).run();
-					}*/
-					robots[0].getTrajectory().gotoD(350).run();
-					robots[0].getTrajectory().gotoA(-90).run();
-					robots[0].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
-					robots[0].getTrajectory().gotoD(1200).setMaxTime(5000).run();
-					robots[0].getTrajectory().meca(MecaState.WIND).run();
-					robots[0].getTrajectory().gotoD(-1000).run();
-					if (playerColor.equals("BLUE")) {
-						robots[0].getTrajectory().gotoA(45).run();
-					}
-					else  {
-						robots[0].getTrajectory().gotoA(135).run();
-					}
-				} else if (turn == 3) {
-					robots[1].getTrajectory().gotoD(30).run();
-					robots[1].getTrajectory().gotoA(90).run();
-					if (playerColor.equals("BLUE")) {
-						robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
-					}
-					else  {
-						robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
-					}
-					robots[1].getTrajectory().gotoD(-935).run();
-					robots[1].getTrajectory().meca(MecaState.TAKE).run();
-					for(int i = 0; i < 4; i += 1) {						
-						robots[1].getTrajectory().gotoD(75).run();
-						if (playerColor.equals("BLUE")) {
-							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
-						}
-						else  {
-							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
-						}
-						robots[1].getTrajectory().meca(MecaState.TAKE).run();
-						if (playerColor.equals("BLUE")) {
-							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
-						}
-						else  {
-							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
-						}
-						robots[1].getTrajectory().meca(MecaState.TAKE).run();
-					}										
-					robots[1].getTrajectory().gotoD(580).run();
-					if (playerColor.equals("BLUE")) {
-						robots[1].getTrajectory().gotoA(0).run();
-					} else {
-						robots[1].getTrajectory().gotoA(180).run();
-					}
-					robots[1].getTrajectory().gotoD(70).run();
-					robots[1].getTrajectory().gotoA(90).run();
-					for(int i = 0; i < 4; i += 1) {		
-						robots[1].getTrajectory().gotoD(10).run();
-						if (playerColor.equals("BLUE")) {
-							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
-						}
-						else  {
-							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
-						}
-						robots[1].getTrajectory().meca(MecaState.RELEASE).run();						
-					}
-					robots[1].getTrajectory().gotoD(500).run();
-					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
-					robots[1].getTrajectory().meca(MecaState.TAKE).run();					
-					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
-					robots[1].getTrajectory().meca(MecaState.TAKE).run();					
-					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
-					robots[1].getTrajectory().gotoD(400).setMaxTime(2500).run();
-					robots[1].getTrajectory().meca(MecaState.LIGHT).run();
-					robots[1].getTrajectory().gotoD(-700).run();
-				} else if (compass != null && !goto_compass && robots[1].getTrajectory().isDone()) {
-				
-					goto_compass = true;
-					if (compass.equals("N")) {
-						if (playerColor.equals("BLUE")) {
-							robots[0].getTrajectory().gotoA(180).run();
-							robots[0].getTrajectory().gotoD(350).run();
-							robots[0].getTrajectory().gotoA(90).run();
-							robots[0].getTrajectory().gotoD(400).run();
-							robots[1].getTrajectory().gotoD(500).run();
-						} else {
-							robots[0].getTrajectory().gotoA(0).run();
-							robots[0].getTrajectory().gotoD(350).run();
-							robots[0].getTrajectory().gotoA(90).run();
-							robots[0].getTrajectory().gotoD(400).run();
-							robots[1].getTrajectory().gotoD(500).run();
-						}
-					} else {
-						if (playerColor.equals("BLUE")) {
-							robots[0].getTrajectory().gotoA(180).run();
-							robots[0].getTrajectory().gotoD(350).run();
-							robots[0].getTrajectory().gotoA(-90).run();
-							robots[0].getTrajectory().gotoD(200).run();
-							robots[1].getTrajectory().gotoD(-500).run();
-						} else {
-							robots[0].getTrajectory().gotoA(0).run();
-							robots[0].getTrajectory().gotoD(350).run();
-							robots[0].getTrajectory().gotoA(-90).run();
-							robots[0].getTrajectory().gotoD(200).run();
-							robots[1].getTrajectory().gotoD(-500).run();
-						}
-					}
-
-					score += 10;
-				} else if(ACUTAL_TIME_ms > 96000 && !flag) {
-					boolean take_right = false;
-					if (compass.equals("N")) { 
-						if (playerColor.equals("BLUE")) {
-							take_right = true;
-						}
-					}
-					else { 
-						if (!playerColor.equals("BLUE")) {
-							take_right = true;
-						}
-					}
-					
-					if (take_right) {
-						robots[0].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
-						robots[0].getTrajectory().meca(MecaState.TAKE).run();
-						robots[0].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
-						robots[0].getTrajectory().meca(MecaState.RELEASE).run();
-					} else {
-						robots[0].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
-						robots[0].getTrajectory().meca(MecaState.TAKE).run();
-						robots[0].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
-						robots[0].getTrajectory().meca(MecaState.RELEASE).run();
-					}
-					
-					//robots[0].getTrajectory().meca(MecaState.FLAG).run();
-					robots[1].setMeca(MecaState.FLAG);
-					flag = true;
-					score += 10; //flag
-					score += 13; //light
-					score += 5; //winsocks
-					score += 2; //cup
-					score += 4; //cup
+					robots[0].getTrajectory().gotoD(500).run();
+					try2ndPort(robots[0], playerI);
 				}
 
 				for (int i = 0; i < 2; i++) {
@@ -656,5 +602,14 @@ class AgentAsserv {
 				ACUTAL_TIME_ms += 350;
 			}
 		}
+	}
+
+	private static void try2ndPort(Robot robot, int playerI) {
+		robot.setMeca(MecaState.ACTIVATE_FRONT);
+		robot.getTrajectory().gotoXY(1500 - playerI * 435, 520).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+		robot.getTrajectory().gotoA(90 - playerI * 90).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
 	}
 }

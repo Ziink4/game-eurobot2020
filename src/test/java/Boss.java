@@ -46,6 +46,10 @@ class Boss {
 		FRONT, BACK
 	}
 
+	public static enum MecaState {
+		IDLE, ACTIVATE_FRONT, TAKE, LIGHT, FLAG, WIND, ACTIVATE_RIGHT, ACTIVATE_LEFT, RELEASE
+	}
+
 	public static class Trajectory {
 		public static enum TrajectoryStatus {
 			SUCCESS, RUNNING, ORDER_DONE, TIMEOUT_BEFORE_END, ORDER_IN_PROGRESS
@@ -60,6 +64,7 @@ class Boss {
 			private boolean _initialized;
 			private double _start_angle;
 			private int _start_time;
+			private int _maxtime = -1;
 
 			public TrajectoryOrder(Trajectory trajectory) {
 				_trajectory = trajectory;
@@ -70,12 +75,12 @@ class Boss {
 				_trajectory.addOrder(this);
 			}
 
-			public void initialize(double distance, double angle, double x, double y) {
+			public void initialize(int time, double distance, double angle, double x, double y) {
 				_start_distance = distance;
 				_start_angle = angle;
 				_start_x = x;
 				_start_y = y;
-				_start_time = ACUTAL_TIME_ms;
+				_start_time = time;
 				_initialized = true;
 			}
 
@@ -88,7 +93,7 @@ class Boss {
 			}
 
 			public int maxTime() {
-				return -1;
+				return _maxtime;
 			}
 
 			public int getStartTime() {
@@ -110,6 +115,11 @@ class Boss {
 			protected double getEstimatedDistanceBeforeStop() {
 				// TODO Auto-generated method stub
 				return 0;
+			}
+
+			public TrajectoryOrder setMaxTime(int max) {
+				_maxtime = max;
+				return this;
 			}
 		}
 
@@ -156,6 +166,26 @@ class Boss {
 				return TrajectoryStatus.ORDER_IN_PROGRESS;
 			}
 
+		}
+
+		public static class TrajectoryOrderMeca extends TrajectoryOrder {
+
+			private MecaState _state;
+
+			public TrajectoryOrderMeca(Trajectory trajectory) {
+				super(trajectory);
+			}
+
+			public TrajectoryOrder setState(MecaState state) {
+				_state = state;
+				return this;
+			}
+
+			@Override
+			public TrajectoryStatus compute() {
+				getTrajectory().getRobot().setMeca(_state);
+				return TrajectoryStatus.ORDER_DONE;
+			}
 		}
 
 		public static class TrajectoryOrderGotoA extends TrajectoryOrder {
@@ -243,7 +273,7 @@ class Boss {
 			_estimations_need_recompute = true;
 		}
 
-		public void compute() {
+		public void compute(int current_time_ms) {
 			if (_estimations_need_recompute) {
 				compute_estimations();
 				_estimations_need_recompute = false;
@@ -256,12 +286,12 @@ class Boss {
 				// check if order is new
 				if (!order.isInitialized()) {
 					// set real start values
-					order.initialize(_robot.getDistance(), _robot.getAngle(), _robot.getX(), _robot.getY());
+					order.initialize(current_time_ms, _robot.getDistance(), _robot.getAngle(), _robot.getX(), _robot.getY());
 				}
 				TrajectoryStatus status = order.compute();
 
 				if (order.maxTime() >= 0) {
-					if (ACUTAL_TIME_ms - order.getStartTime() > order.maxTime()) {
+					if (current_time_ms - order.getStartTime() > order.maxTime()) {
 						status = TrajectoryStatus.ORDER_DONE;
 						_result = TrajectoryStatus.TIMEOUT_BEFORE_END;
 
@@ -296,6 +326,19 @@ class Boss {
 		public TrajectoryOrder gotoA(double angle) {
 			return new TrajectoryOrderGotoA(this).setAngle(angle);
 		}
+
+		public void removeAllOrders() {
+			_orders.clear();
+			_estimations_need_recompute = true;
+		}
+
+		public TrajectoryOrder meca(MecaState state) {
+			return new TrajectoryOrderMeca(this).setState(state);
+		}
+
+		public boolean isDone() {
+			return _orders.size() == 0;
+		}
 	}
 
 	public static class Robot {
@@ -310,9 +353,10 @@ class Boss {
 		private double _distance;
 		private int _left_motor;
 		private int _right_motor;
-		private PID _pid_dist = new PID(0.1, 0.1, 0, 50);
-		private PID _pid_angu = new PID(3, 0, 0, 0);
+		private PID _pid_dist = new PID(1, 1, 0.0, 50);
+		private PID _pid_angu = new PID(2, 0, 0, 0);
 		private Trajectory _trajectory;
+		private MecaState _meca = MecaState.IDLE;
 
 		public Robot() {
 			_trajectory = new Trajectory(this);
@@ -364,14 +408,14 @@ class Boss {
 			_y += _deltaDistance * TICK_TO_MM * Math.sin(Math.toRadians(_angle));
 		}
 
-		public String getOutputs() {
-			compute();
+		public String getOutputs(int current_time_ms) {
+			compute(current_time_ms);
 
-			return _left_motor + " " + _right_motor + " IDLE";
+			return _left_motor + " " + _right_motor + " " + _meca.toString();
 		}
 
-		private void compute() {
-			_trajectory.compute();
+		private void compute(int current_time_ms) {
+			_trajectory.compute(current_time_ms);
 			_pid_dist.compute(_distance);
 			_pid_angu.compute(_angle);
 
@@ -379,11 +423,11 @@ class Boss {
 			double right_motor = _pid_dist.getOutput() + _pid_angu.getOutput();
 
 			double scale = 1.0;
-			if (Math.abs(left_motor) / 100.0 > scale) {
-				scale = Math.abs(left_motor) / 100.0;
+			if (Math.abs(left_motor) / 1000.0 > scale) {
+				scale = Math.abs(left_motor) / 1000.0;
 			}
-			if (Math.abs(right_motor) / 100.0 > scale) {
-				scale = Math.abs(right_motor) / 100.0;
+			if (Math.abs(right_motor) / 1000.0 > scale) {
+				scale = Math.abs(right_motor) / 1000.0;
 			}
 
 			_left_motor = (int) (left_motor / scale);
@@ -406,12 +450,17 @@ class Boss {
 			return _trajectory;
 		}
 
+		public void setMeca(MecaState meca) {
+			_meca = meca;
+		}
+
 	}
 
 	public static void main(String[] args) {
 		try (Scanner in = new Scanner(System.in)) {
 			int turn = 0;
-			int score = 0;
+			int score = 2;
+			boolean flag = false;
 			Robot[] robots = { null, null };
 
 			boolean goto_compass = false;
@@ -457,55 +506,150 @@ class Boss {
 				}
 
 				if (turn == 0) {
+					/*
 					if (playerColor.equals("BLUE")) {
 						robots[0].getTrajectory().gotoD(1500 - robots[0].getX()).run();
 					} else {
 						robots[0].getTrajectory().gotoD(robots[0].getX() - 1500).run();
+					}*/
+					robots[0].getTrajectory().gotoD(350).run();
+					robots[0].getTrajectory().gotoA(-90).run();
+					robots[0].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[0].getTrajectory().gotoD(1200).setMaxTime(5000).run();
+					robots[0].getTrajectory().meca(MecaState.WIND).run();
+					robots[0].getTrajectory().gotoD(-1000).run();
+					if (playerColor.equals("BLUE")) {
+						robots[0].getTrajectory().gotoA(45).run();
 					}
-					robots[0].getTrajectory().gotoA(90).run();
-				} else if (turn == 5) {
-					robots[1].getTrajectory().gotoD(75).run();
+					else  {
+						robots[0].getTrajectory().gotoA(135).run();
+					}
+				} else if (turn == 3) {
+					robots[1].getTrajectory().gotoD(30).run();
 					robots[1].getTrajectory().gotoA(90).run();
-					robots[1].getTrajectory().gotoD(2000).run();
-				} else if (compass != null && !goto_compass) {
+					if (playerColor.equals("BLUE")) {
+						robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+					}
+					else  {
+						robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+					}
+					robots[1].getTrajectory().gotoD(-935).run();
+					robots[1].getTrajectory().meca(MecaState.TAKE).run();
+					for(int i = 0; i < 4; i += 1) {						
+						robots[1].getTrajectory().gotoD(75).run();
+						if (playerColor.equals("BLUE")) {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						}
+						else  {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						}
+						robots[1].getTrajectory().meca(MecaState.TAKE).run();
+						if (playerColor.equals("BLUE")) {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						}
+						else  {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						}
+						robots[1].getTrajectory().meca(MecaState.TAKE).run();
+					}										
+					robots[1].getTrajectory().gotoD(580).run();
+					if (playerColor.equals("BLUE")) {
+						robots[1].getTrajectory().gotoA(0).run();
+					} else {
+						robots[1].getTrajectory().gotoA(180).run();
+					}
+					robots[1].getTrajectory().gotoD(70).run();
+					robots[1].getTrajectory().gotoA(90).run();
+					for(int i = 0; i < 4; i += 1) {		
+						robots[1].getTrajectory().gotoD(10).run();
+						if (playerColor.equals("BLUE")) {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						}
+						else  {
+							robots[1].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						}
+						robots[1].getTrajectory().meca(MecaState.RELEASE).run();						
+					}
+					robots[1].getTrajectory().gotoD(500).run();
+					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[1].getTrajectory().meca(MecaState.TAKE).run();					
+					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[1].getTrajectory().meca(MecaState.TAKE).run();					
+					robots[1].getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+					robots[1].getTrajectory().gotoD(400).setMaxTime(2500).run();
+					robots[1].getTrajectory().meca(MecaState.LIGHT).run();
+					robots[1].getTrajectory().gotoD(-700).run();
+				} else if (compass != null && !goto_compass && robots[1].getTrajectory().isDone()) {
+				
 					goto_compass = true;
 					if (compass.equals("N")) {
 						if (playerColor.equals("BLUE")) {
 							robots[0].getTrajectory().gotoA(180).run();
-							robots[0].getTrajectory().gotoD(1300).run();
+							robots[0].getTrajectory().gotoD(350).run();
 							robots[0].getTrajectory().gotoA(90).run();
-							robots[0].getTrajectory().gotoD(500).run();
+							robots[0].getTrajectory().gotoD(400).run();
 							robots[1].getTrajectory().gotoD(500).run();
 						} else {
 							robots[0].getTrajectory().gotoA(0).run();
-							robots[0].getTrajectory().gotoD(1300).run();
+							robots[0].getTrajectory().gotoD(350).run();
 							robots[0].getTrajectory().gotoA(90).run();
-							robots[0].getTrajectory().gotoD(500).run();
+							robots[0].getTrajectory().gotoD(400).run();
 							robots[1].getTrajectory().gotoD(500).run();
 						}
 					} else {
 						if (playerColor.equals("BLUE")) {
 							robots[0].getTrajectory().gotoA(180).run();
-							robots[0].getTrajectory().gotoD(1300).run();
+							robots[0].getTrajectory().gotoD(350).run();
 							robots[0].getTrajectory().gotoA(-90).run();
-							robots[0].getTrajectory().gotoD(500).run();
+							robots[0].getTrajectory().gotoD(200).run();
 							robots[1].getTrajectory().gotoD(-500).run();
 						} else {
 							robots[0].getTrajectory().gotoA(0).run();
-							robots[0].getTrajectory().gotoD(1300).run();
+							robots[0].getTrajectory().gotoD(350).run();
 							robots[0].getTrajectory().gotoA(-90).run();
-							robots[0].getTrajectory().gotoD(500).run();
+							robots[0].getTrajectory().gotoD(200).run();
 							robots[1].getTrajectory().gotoD(-500).run();
 						}
 					}
 
 					score += 10;
-				} else {
-
+				} else if(ACUTAL_TIME_ms > 96000 && !flag) {
+					boolean take_right = false;
+					if (compass.equals("N")) { 
+						if (playerColor.equals("BLUE")) {
+							take_right = true;
+						}
+					}
+					else { 
+						if (!playerColor.equals("BLUE")) {
+							take_right = true;
+						}
+					}
+					
+					if (take_right) {
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						robots[0].getTrajectory().meca(MecaState.TAKE).run();
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						robots[0].getTrajectory().meca(MecaState.RELEASE).run();
+					} else {
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_LEFT).run();
+						robots[0].getTrajectory().meca(MecaState.TAKE).run();
+						robots[0].getTrajectory().meca(MecaState.ACTIVATE_RIGHT).run();
+						robots[0].getTrajectory().meca(MecaState.RELEASE).run();
+					}
+					
+					//robots[0].getTrajectory().meca(MecaState.FLAG).run();
+					robots[1].setMeca(MecaState.FLAG);
+					flag = true;
+					score += 10; //flag
+					score += 13; //light
+					score += 5; //winsocks
+					score += 2; //cup
+					score += 4; //cup
 				}
 
 				for (int i = 0; i < 2; i++) {
-					System.out.println(robots[i].getOutputs());
+					System.out.println(robots[i].getOutputs(ACUTAL_TIME_ms));
 				}
 				System.out.println(score);
 				turn += 1;

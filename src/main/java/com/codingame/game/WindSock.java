@@ -16,7 +16,17 @@ public class WindSock implements ZObject {
 	public WindSock(Referee referee, int index, int i) {
 		_windsock = referee.getGraphicEntityModule().createGroup();	
 		_windsockActivated = referee.getGraphicEntityModule().createGroup();
-		_windsock.add(referee.getGraphicEntityModule().createRectangle().setWidth(165).setHeight(22).setX(-65).setFillColor(0xFFFFFF));
+		switch(index) {
+		case 0:
+			_windsock.add(referee.getGraphicEntityModule().createRectangle().setWidth(165).setHeight(22).setX(-65).setFillColor(0xFFFFFF));
+			break;
+			
+		case 1:
+			_windsock.add(referee.getGraphicEntityModule().createRectangle().setWidth(165).setHeight(22).setX(-100).setFillColor(0xFFFFFF));
+			break;
+		}
+		
+		
 		
 		
 		for(int k = 0; k < 165; k += 2*165/5) {
@@ -47,7 +57,6 @@ public class WindSock implements ZObject {
 		case 1:
 			position.set(3000 - 230 - i * 405, -22);
 			body.translate(3.0 - (0.230 + i * 0.405 - 0.065 + 0.165/2), -0.022 - 0.011);
-
 			break;
 		}
 		
