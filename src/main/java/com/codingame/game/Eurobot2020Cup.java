@@ -82,8 +82,9 @@ public class Eurobot2020Cup implements ZObject {
 
 	public void addToTable(Referee referee, Vector2 position) {
 		_body.translate(_body.getTransform().getTranslation().negate().add(position));
+		_body.translate(Math.random() / 1000.0,Math.random() / 1000.0);
 		_body.setAngularVelocity(0);
-		_body.setLinearVelocity(new Vector2(0, 0));
+		_body.setLinearVelocity(new Vector2(0,0));
 		referee.getWorld().addBody(_body);
 	}
 

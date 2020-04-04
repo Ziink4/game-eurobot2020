@@ -61,7 +61,7 @@ public class Referee extends AbstractReferee {
 		_world = new World();
 		// _world.getSettings().setStepFrequency(FRAME_DURATION_ms / 1000);
 		_world.setGravity(World.ZERO_GRAVITY);
-		//_world.setBroadphaseDetector(new Sap<Body, BodyFixture>());
+		_world.setBroadphaseDetector(new Sap<Body, BodyFixture>());
 		_world.setNarrowphaseDetector(new Sat());
 
 		// Display compass

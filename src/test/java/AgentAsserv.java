@@ -9,12 +9,31 @@ class AgentAsserv {
 	private static boolean _park;
 	private static boolean _takeFloorSouth;
 	private static boolean _takeSideDistri;
+	
+	public static class AsservTypeVincent extends PID {
+		
+		private double _max_speed_per_turn;
+
+		public AsservTypeVincent(double max_speed_per_turn) {
+			super(0, 0, 0, 0);
+			
+			_max_speed_per_turn = max_speed_per_turn;
+		}
+		
+		public void compute(double feedback) {
+			double delta = _sp - feedback;
+			
+			_out = delta * 1000.0 / _max_speed_per_turn;
+		}
+	}
+	
+	
 
 	public static class PID {
 
 		private double _kp;
-		private double _sp;
-		private double _out;
+		protected double _sp;
+		protected  double _out;
 		private double _ki;
 		private int _max_i;
 		private int _integral;
@@ -226,25 +245,32 @@ class AgentAsserv {
 
 		public static class TrajectoryOrderScore extends TrajectoryOrder {
 
-			private int _value;
+			private int _value = 0;
+			private int _z1 = 0;
+			private int _z2 = 0;
+			private int _z3 = 0;
+			private int _z4 = 0;
 
 			public TrajectoryOrderScore(Trajectory trajectory) {
 				super(trajectory);
 			}
 
 			public TrajectoryOrderScore setValue(int v) {
-				_value = v;
-				return this;
+				return setValue(v, 0, 0, 0, 0);
 			}
 
 			@Override
 			public TrajectoryStatus compute() {
-				getTrajectory().getRobot().addScore(_value);
+				getTrajectory().getRobot().addScore(_value, _z1, _z2, _z3, _z4);
 				return TrajectoryStatus.ORDER_NEXT;
 			}
 
-			public TrajectoryOrder setValue(int value, int z1, int z2) {
+			public TrajectoryOrderScore setValue(int value, int z1, int z2, int z3, int z4) {
 				_value = value;
+				_z1 = z1;
+				_z2 = z2;
+				_z3 = z3;
+				_z4 = z4;		
 				return this;
 			}
 		}
@@ -437,7 +463,7 @@ class AgentAsserv {
 				// remove order of the list if needed
 				if (status == TrajectoryStatus.ORDER_DONE) {
 					_orders.pollFirst();
-					break;
+					//break;
 				} else if (status == TrajectoryStatus.ORDER_NEXT) {
 					_orders.pollFirst();
 				} else {
@@ -485,8 +511,8 @@ class AgentAsserv {
 			return new TrajectoryOrderScore(this).setValue(value);
 		}
 
-		public TrajectoryOrder addScore(int value, int z1, int z2) {
-			return new TrajectoryOrderScore(this).setValue(value, z1, z2);
+		public TrajectoryOrder addScore(int value, int z1, int z2, int z3, int z4) {
+			return new TrajectoryOrderScore(this).setValue(value, z1, z2, z3, z4);
 		}
 	}
 
@@ -502,22 +528,28 @@ class AgentAsserv {
 		private double _distance;
 		private int _left_motor;
 		private int _right_motor;
-		private PID _pid_dist = new PID(1, 1, 0.0, 50);
-		private PID _pid_angu = new PID(2, 0, 0, 0);
+		
+		private PID _pid_dist = new AsservTypeVincent(2000.0 / 1000.0 * 350.0);
+		private PID _pid_angu = new AsservTypeVincent(320);
 		private Trajectory _trajectory;
 		private MecaState _meca = MecaState.IDLE;
 		private boolean _mecaSet = false;
 		private int[] _score;
 		private boolean _flag = false;
 		public boolean _park;
+		private boolean _forceStop;
 
 		public Robot(int[] score) {
 			_trajectory = new Trajectory(this);
 			_score = score;
 		}
 
-		public void addScore(int value) {
+		public void addScore(int value, int z1, int z2, int z3, int z4) {
 			_score[0] += value;
+			_score[1] += z1;
+			_score[2] += z2;
+			_score[3] += z3;
+			_score[4] += z4;
 		}
 
 		public boolean mecaSet() {
@@ -585,7 +617,7 @@ class AgentAsserv {
 			if (!_mecaSet && !_flag && current_time_ms > 95000) {
 				_flag = true;
 				setMeca(MecaState.FLAG);
-				addScore(5);
+				addScore(5,0,0,0,0);
 			}
 
 			double left_motor = _pid_dist.getOutput() - _pid_angu.getOutput();
@@ -601,6 +633,16 @@ class AgentAsserv {
 
 			_left_motor = (int) (left_motor / scale);
 			_right_motor = (int) (right_motor / scale);
+			
+			if(_forceStop) {
+			    _left_motor = 0;
+			    _right_motor = 0;
+			    _forceStop = false;
+			}
+		}
+		
+		public void forceStop() {
+		    _forceStop = true;
 		}
 
 		public void setAsservDistanceSetpoint(double dist) {
@@ -629,7 +671,7 @@ class AgentAsserv {
 	public static void main(String[] args) {
 		try (Scanner in = new Scanner(System.in)) {
 			int turn = 0;
-			int[] score = { 2 };
+			int[] score = { 2,0,0,0,0 };
 
 			Robot[] robots = { null, null };
 
@@ -659,7 +701,6 @@ class AgentAsserv {
 					robots[i].setEncoders(leftEncoder, rightEncoder);
 					if (!detectedCompass.equals("?") && ACUTAL_TIME_ms > 26000) {
 						compass = detectedCompass;
-						compass = "S";
 					}
 
 				}
@@ -673,6 +714,10 @@ class AgentAsserv {
 					int frontRightHighSensor = in.nextInt();
 					int backRightHighSensor = in.nextInt();
 					int backLeftHighSensor = in.nextInt();
+					
+					if((i == 0) && (frontLeftHighSensor < 400) && (frontRightHighSensor < 400) && robots[0].getY() > 500) {
+					    robots[0].forceStop();
+					}
 				}
 				for (int i = 0; i < 2; i++) {
 					for (int j = 0; j < 360; j++) {
@@ -697,12 +742,14 @@ class AgentAsserv {
 							} else if (!_addLastRed) {
 								tryAddLastRed(robots[0], playerI);
 							}
+							/*
 							else if (!_takeFloorSouth) {
 								tryTakeFloorSouth(robots[0], playerI);
 							}
 							else if (!_takeSideDistri) {
 								tryTakeSideDistri(robots[0], playerI);
 							}
+							*/
 						}
 
 						if (robots[1].getTrajectory().isDone()) {
@@ -720,7 +767,15 @@ class AgentAsserv {
 					System.err.println(robots[i].debugPosition());
 					System.err.println(compass);
 				}
-				System.out.println(score[0]);
+				System.out.println(score[0] + 2 * Math.min(score[1], score[2]) + 2 * Math.min(score[3], score[4]));
+				
+				//debug score
+				String dbg = "";
+				for(int i = 0; i < 5; i += 1) {
+					dbg += " " + score[i];
+				}
+				System.err.println(dbg);
+				
 				turn += 1;
 				ACUTAL_TIME_ms += 350;
 			}
@@ -785,13 +840,13 @@ class AgentAsserv {
 		robot.getTrajectory().gotoD(200).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
 		robot.getTrajectory().meca(MecaState.RELEASE).run();
-		robot.getTrajectory().addScore(1, 0, 0).run();
+		robot.getTrajectory().addScore(1, 0, 0, 0, 0).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
 		robot.getTrajectory().meca(MecaState.RELEASE).run();
-		robot.getTrajectory().addScore(2, 1, 0).run();
+		robot.getTrajectory().addScore(2, 1, 0, 0, 0).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
 		robot.getTrajectory().meca(MecaState.RELEASE).run();
-		robot.getTrajectory().addScore(2, 1, 0).run();
+		robot.getTrajectory().addScore(2, 1, 0, 0, 0).run();
 		robot.getTrajectory().gotoD(-500).run();
 		
 		_takeFloorSouth = true;
@@ -802,7 +857,7 @@ class AgentAsserv {
 		r2.getTrajectory().gotoA(90).run();
 		r2.getTrajectory().gotoXY(Double.NaN, 2000 - 800 + direction * 550).run();
 		r2.getTrajectory().gotoA(90 - playerI * 90).run();
-		r2.getTrajectory().gotoD(-350).run();
+		r2.getTrajectory().gotoD(-250).run();
 		r2.getTrajectory().addScore(5).run();
 		
 		r1.getTrajectory().gotoXY(1500 - playerI * (1500 - 950), 2000 - 800).run();
@@ -820,8 +875,9 @@ class AgentAsserv {
 		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 300), 1500).run();
 		robot.getTrajectory().gotoA(90).run();
 		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(380).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(350).run();
+		robot.getTrajectory().gotoA(90 - playerI * 90).run();
 		robot.getTrajectory().meca(MecaState.LIGHT).run();
 		robot.getTrajectory().addScore(13).run();
 		_lightHouse = true;
@@ -829,17 +885,43 @@ class AgentAsserv {
 
 	private static void tryAddLastRed(Robot robot, int playerI) {
 		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
-		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 150), 2000 - 1750).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 170), 2000 - 1800).run();
 		robot.getTrajectory().gotoA(90).run();
 		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(180).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(-75).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(150).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		
 		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
-		robot.getTrajectory().gotoXY(1500 + playerI * 250, 450).run();
+		robot.getTrajectory().gotoXY(1500 + playerI * 250, 410).run();
 		robot.getTrajectory().gotoA(90 - playerI * 90).run();
-		robot.getTrajectory().gotoD(100).run();
+		
 		robot.getTrajectory().meca(MecaState.RELEASE).run();
-		robot.getTrajectory().addScore(4).run();
-		robot.getTrajectory().gotoD(-300).run();
+		robot.getTrajectory().addScore(2, 0, 0, 0, 1).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(2, 0, 0, 0, 1).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(150).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(2, 0, 0, 1, 0).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(2, 0, 0, 1, 0).run();
+		robot.getTrajectory().gotoXY(1500, Double.NaN).run();
 		robot.getTrajectory().gotoA(90).run();
+		
 		_addLastRed = true;
 	}
 
@@ -860,56 +942,78 @@ class AgentAsserv {
 
 	private static void try2ndPort(Robot robot, int playerI) {
 		robot.setMeca(MecaState.ACTIVATE_FRONT);
-		robot.getTrajectory().gotoXY(1500 - playerI * 435, 525).run();
-		robot.getTrajectory().meca(MecaState.TAKE).run();
-		robot.getTrajectory().gotoD(15).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * 435, 520).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
 		robot.getTrajectory().gotoA(90 - playerI * 90).run();
 		robot.getTrajectory().meca(MecaState.TAKE).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
 		robot.getTrajectory().gotoXY(1500 - playerI * 165, 520).run();
-		robot.getTrajectory().gotoA(90 - playerI * 90).run();
 		robot.getTrajectory().meca(MecaState.TAKE).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
-		robot.getTrajectory().gotoA(90 - playerI * 90).run();
 		robot.getTrajectory().gotoXY(1500 + playerI * 165, 520).run();
 		robot.getTrajectory().meca(MecaState.TAKE).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(40).run();
-		robot.getTrajectory().gotoA(-90).run();
-		robot.getTrajectory().gotoD(300).run();
+		robot.getTrajectory().gotoXY(1500 + playerI * 435, 520).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();	
+		robot.getTrajectory().gotoD(-150).run();
+		robot.getTrajectory().gotoA(-90).run();		
+		robot.getTrajectory().gotoD(280).run();
+		robot.getTrajectory().gotoA(-90 + playerI * 90).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(120).run();
 		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		
+		robot.getTrajectory().addScore(2, 0, 0, 1, 0).run();
+		robot.getTrajectory().gotoD(70).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+
+		robot.getTrajectory().gotoD(-300).run();
+		
 		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().addScore(2, 0, 0, 0, 1).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().addScore(2, 0, 0, 0, 1).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(-80).run();
+		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
 		robot.getTrajectory().gotoD(155).run();
-		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
-		robot.getTrajectory().gotoA(-90 + playerI * 20).run();
-		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
 		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoA(-90 - playerI * 45).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().addScore(2, 0, 0, 1, 0).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().addScore(2, 0, 0, 1, 0).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().addScore(2, 0, 0, 0, 1).run();
 		robot.getTrajectory().gotoA(-90).run();
-		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(-145).run();
-		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(-30).run();
-		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(-30).run();
-		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+
+		robot.getTrajectory().gotoD(-350).run();
+		
 		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoA(-90 + playerI * 90).run();
 		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
+		
 		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
-		robot.getTrajectory().gotoD(-50).run();
-		robot.getTrajectory().gotoA(-90 - playerI * 20).run();
+		robot.getTrajectory().gotoD(-500).run();
+		robot.getTrajectory().meca(MecaState.TAKE.inverse(playerI)).run();
+		
+		robot.getTrajectory().gotoXY(1500 + playerI * 180, 450).run();
+		robot.getTrajectory().gotoA(-90).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(200).run();
 		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
-		robot.getTrajectory().addScore(20).run();
-		robot.getTrajectory().gotoD(-100).run();
+		robot.getTrajectory().addScore(2, 0, 0, 0, 1).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().addScore(2, 0, 0, 1, 0).run();
+		
+		robot.getTrajectory().gotoD(-700).run();
 	}
 }
