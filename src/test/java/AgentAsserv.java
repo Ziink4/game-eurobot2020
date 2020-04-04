@@ -7,6 +7,8 @@ class AgentAsserv {
 	private static boolean _lightHouse;
 	private static boolean _addLastRed;
 	private static boolean _park;
+	private static boolean _takeFloorSouth;
+	private static boolean _takeSideDistri;
 
 	public static class PID {
 
@@ -239,6 +241,11 @@ class AgentAsserv {
 			public TrajectoryStatus compute() {
 				getTrajectory().getRobot().addScore(_value);
 				return TrajectoryStatus.ORDER_NEXT;
+			}
+
+			public TrajectoryOrder setValue(int value, int z1, int z2) {
+				_value = value;
+				return this;
 			}
 		}
 
@@ -477,6 +484,10 @@ class AgentAsserv {
 		public TrajectoryOrderScore addScore(int value) {
 			return new TrajectoryOrderScore(this).setValue(value);
 		}
+
+		public TrajectoryOrder addScore(int value, int z1, int z2) {
+			return new TrajectoryOrderScore(this).setValue(value, z1, z2);
+		}
 	}
 
 	public static class Robot {
@@ -648,6 +659,7 @@ class AgentAsserv {
 					robots[i].setEncoders(leftEncoder, rightEncoder);
 					if (!detectedCompass.equals("?") && ACUTAL_TIME_ms > 26000) {
 						compass = detectedCompass;
+						compass = "S";
 					}
 
 				}
@@ -674,7 +686,7 @@ class AgentAsserv {
 				} else if (turn == 1) {
 					robots[1].getTrajectory().gotoD(200).run();
 				} else {
-					if (ACUTAL_TIME_ms >= 85000) {
+					if (ACUTAL_TIME_ms >= 87_000) {
 						if(!_park) {
 							tryPark(robots[0], robots[1], playerI, compass.equals("N") ? 1 : - 1);
 						}
@@ -684,6 +696,12 @@ class AgentAsserv {
 								tryWinsock(robots[0], playerI);
 							} else if (!_addLastRed) {
 								tryAddLastRed(robots[0], playerI);
+							}
+							else if (!_takeFloorSouth) {
+								tryTakeFloorSouth(robots[0], playerI);
+							}
+							else if (!_takeSideDistri) {
+								tryTakeSideDistri(robots[0], playerI);
 							}
 						}
 
@@ -707,6 +725,76 @@ class AgentAsserv {
 				ACUTAL_TIME_ms += 350;
 			}
 		}
+	}
+
+	private static void tryTakeSideDistri(Robot robot, int playerI) {
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 150), 2000 - 1750).run();
+		robot.getTrajectory().gotoA(90).run();
+		
+		//green
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		//TODO south > green first
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(80).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(80).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(80).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		
+		//depose
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * 1000, 2000 - 1300).run();
+		robot.getTrajectory().gotoA(90).run();
+		robot.getTrajectory().gotoXY(Double.NaN, 2000 - 1150).run();
+		
+	
+		robot.getTrajectory().gotoA(90).run();
+		robot.getTrajectory().gotoD(500).run();
+		robot.getTrajectory().gotoA(90 + playerI * 90).run();
+		robot.getTrajectory().gotoD(200).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE.inverse(playerI)).run();
+		robot.getTrajectory().gotoD(-200).run();
+		
+		_takeSideDistri = true;
+	}
+	
+	private static void tryTakeFloorSouth(Robot robot, int playerI) {
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+		robot.getTrajectory().gotoXY(1500 - playerI * (1500 - 1100), 2000 - 800).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT).run();
+		robot.getTrajectory().gotoA(-90).run();
+		robot.getTrajectory().gotoXY(Double.NaN, 2000 - 1080).run();
+		robot.getTrajectory().gotoA(90 + playerI * 90).run();
+		robot.getTrajectory().gotoD(750).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_LEFT.inverse(playerI)).run();
+		robot.getTrajectory().gotoA(90 + playerI * 45).run();
+		robot.getTrajectory().meca(MecaState.TAKE).run();
+		robot.getTrajectory().gotoA(90 + playerI * 90).run();
+		robot.getTrajectory().gotoD(200).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_RIGHT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(1, 0, 0).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(2, 1, 0).run();
+		robot.getTrajectory().meca(MecaState.ACTIVATE_FRONT.inverse(playerI)).run();
+		robot.getTrajectory().meca(MecaState.RELEASE).run();
+		robot.getTrajectory().addScore(2, 1, 0).run();
+		robot.getTrajectory().gotoD(-500).run();
+		
+		_takeFloorSouth = true;
 	}
 	
 	private static void tryPark(Robot r1, Robot r2, int playerI, int direction) {

@@ -56,13 +56,13 @@ public class Referee extends AbstractReferee {
 		gameManager.setFrameDuration((int) FRAME_DURATION_ms);
 		gameManager.setMaxTurns(5000);
 		gameManager.setTurnMaxTime(50);
-
+		
 		// Configuration du moteur physique
 		_world = new World();
 		// _world.getSettings().setStepFrequency(FRAME_DURATION_ms / 1000);
 		_world.setGravity(World.ZERO_GRAVITY);
 		//_world.setBroadphaseDetector(new Sap<Body, BodyFixture>());
-		//_world.setNarrowphaseDetector(new Sat());
+		_world.setNarrowphaseDetector(new Sat());
 
 		// Display compass
 		_compass = graphicEntityModule.createGroup(graphicEntityModule.createSprite().setImage("Compass.png")
@@ -119,8 +119,8 @@ public class Referee extends AbstractReferee {
 		_cups.add(new Eurobot2020Cup(this, 2.55, 2 - 1.08, Eurobot2020CupType.GREEN));
 
 		_cups.add(new Eurobot2020Cup(this, 0.30, 2 - 1.2, Eurobot2020CupType.GREEN));
-		_cups.add(new Eurobot2020Cup(this, 0.95, 2 - 1.2, Eurobot2020CupType.GREEN));
-		_cups.add(new Eurobot2020Cup(this, 2.05, 2 - 1.2, Eurobot2020CupType.RED));
+		_cups.add(new Eurobot2020Cup(this, 1.27, 2 - 1.2, Eurobot2020CupType.GREEN));
+		_cups.add(new Eurobot2020Cup(this, 1.73, 2 - 1.2, Eurobot2020CupType.RED));
 		_cups.add(new Eurobot2020Cup(this, 2.70, 2 - 1.2, Eurobot2020CupType.RED));
 
 		_cups.add(new Eurobot2020Cup(this, 1.065, 2 - 1.65, Eurobot2020CupType.GREEN));
