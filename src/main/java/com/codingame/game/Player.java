@@ -1,5 +1,6 @@
 package com.codingame.game;
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -721,66 +722,76 @@ public class Player extends AbstractMultiplayerPlayer implements ZObject {
 				p2r = new AABB(1.25, 0, 1.35, 2 - 1.7);
 			}
 
+			HashSet<Eurobot2020Cup>  set = new HashSet<Eurobot2020Cup>();
 			LinkedList<DetectResult> results = new LinkedList<DetectResult>();
 			referee.getWorld().detect(p1, results);
 			referee.getWorld().detect(p2, results);
 			for (DetectResult r : results) {
 				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
-					classical_score += 1;
+					set.add((Eurobot2020Cup) r.getBody().getUserData());			
 				}
 			}
+			classical_score += set.size();
 
 			// Vérification cannaux port 1
 			results.clear();
 			int green = 0;
+			set.clear();
 			referee.getWorld().detect(p1g, results);
 			for (DetectResult r : results) {
 				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
 					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
 					if (c.getType() == Eurobot2020CupType.GREEN) {
-						green += 1;
+						set.add(c);
 					}
 				}
 			}
+			green = set.size();
 
 			results.clear();
+			set.clear();
 			int red = 0;
 			referee.getWorld().detect(p1r, results);
 			for (DetectResult r : results) {
 				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
 					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
 					if (c.getType() == Eurobot2020CupType.RED) {
-						red += 1;
+						set.add(c);
 					}
 				}
 			}
+			red = set.size();
 
 			classical_score += red + green + 2 * Integer.min(red, green);
 
 			// Vérification cannaux port 2
 			results.clear();
+			set.clear();
 			green = 0;
 			referee.getWorld().detect(p2g, results);
 			for (DetectResult r : results) {
 				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
 					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
 					if (c.getType() == Eurobot2020CupType.GREEN) {
-						green += 1;
+						set.add(c);
 					}
 				}
 			}
+			green = set.size();
 
 			results.clear();
+			set.clear();
 			red = 0;
 			referee.getWorld().detect(p2r, results);
 			for (DetectResult r : results) {
 				if (r.getBody().getUserData() instanceof Eurobot2020Cup) {
 					Eurobot2020Cup c = (Eurobot2020Cup) r.getBody().getUserData();
 					if (c.getType() == Eurobot2020CupType.RED) {
-						red += 1;
+						set.add(c);
 					}
 				}
 			}
+			red = set.size();
 
 			classical_score += red + green + 2 * Integer.min(red, green);
 
